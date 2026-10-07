@@ -12,7 +12,9 @@
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "CFBundleDevelopmentRegion": "es",
-        "CFBundleLocalizations": ["es"]
+        "CFBundleLocalizations": [
+          "es"
+        ]
       }
     },
     "android": {
@@ -32,8 +34,15 @@
       "typedRoutes": true,
       "reactCompiler": true
     },
-    "extra": { "router": {} },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "1a7da5c2-ed2a-40c1-9163-9e6396af668f"
+      }
+    },
     "owner": "trackaria",
-    "runtimeVersion": { "policy": "appVersion" }
+    "runtimeVersion": {
+      "policy": "appVersion"
+    }
   }
 }
