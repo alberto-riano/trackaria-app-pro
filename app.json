@@ -1,0 +1,39 @@
+{
+  "expo": {
+    "name": "Trackaria Pro",
+    "slug": "trackaria-pro",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "trackariapro",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "bundleIdentifier": "com.trackaria.pro",
+      "supportsTablet": false,
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
+        "CFBundleDevelopmentRegion": "es",
+        "CFBundleLocalizations": ["es"]
+      }
+    },
+    "android": {
+      "package": "com.trackaria.pro",
+      "predictiveBackGestureEnabled": false
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-secure-store",
+        {
+          "faceIDPermission": "Trackaria Pro guarda tu sesión en el llavero del móvil para que no tengas que entrar cada vez."
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    },
+    "extra": { "router": {} },
+    "owner": "trackaria",
+    "runtimeVersion": { "policy": "appVersion" }
+  }
+}
