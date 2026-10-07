@@ -7,6 +7,13 @@ function mayuscula(texto: string) {
   return texto.charAt(0).toUpperCase() + texto.slice(1);
 }
 
+/** Una fecha como `2026-10-07`, en local y sin que el huso la mueva un día. */
+export function enIso(fecha: Date) {
+  const mes = String(fecha.getMonth() + 1).padStart(2, '0');
+  const dia = String(fecha.getDate()).padStart(2, '0');
+  return `${fecha.getFullYear()}-${mes}-${dia}`;
+}
+
 /** Una fecha `2026-10-07` como objeto, sin que el huso la mueva un día. */
 export function comoFecha(iso: string) {
   return new Date(`${iso}T00:00:00`);

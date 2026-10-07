@@ -33,7 +33,6 @@ function RootNavigator() {
       </Stack.Protected>
       <Stack.Protected guard={!!token}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="cuenta" options={{ title: 'Tu cuenta' }} />
         <Stack.Screen
           name="chat/[id]"
           options={{

@@ -23,11 +23,25 @@ export function Chip({ label, tone = 'neutral' }: { label: string; tone?: 'neutr
   );
 }
 
-/** El círculo con las iniciales. Sin fotos: por aquí pasan datos de pacientes. */
-export function Avatar({ nombre, tono = 'neutral' }: { nombre: string; tono?: 'neutral' | 'alerta' }) {
+/**
+ * El círculo con las iniciales. Sin fotos: por aquí pasan datos de pacientes.
+ *
+ * `insignia` cuelga debajo, donde iría el punto de estado de cualquier chat.
+ * Ahí va quién lleva la conversación, que es el dato propio de esta app.
+ */
+export function Avatar({
+  nombre, tono = 'neutral', insignia,
+}: {
+  nombre: string;
+  tono?: 'neutral' | 'alerta';
+  insignia?: React.ReactNode;
+}) {
   return (
-    <View style={[styles.avatar, tono === 'alerta' && styles.avatarAlerta]}>
-      <Text style={[styles.avatarTexto, tono === 'alerta' && { color: colors.warning }]}>{iniciales(nombre)}</Text>
+    <View style={styles.avatarCaja}>
+      <View style={[styles.avatar, tono === 'alerta' && styles.avatarAlerta]}>
+        <Text style={[styles.avatarTexto, tono === 'alerta' && { color: colors.warning }]}>{iniciales(nombre)}</Text>
+      </View>
+      {insignia ? <View style={styles.insignia}>{insignia}</View> : null}
     </View>
   );
 }
@@ -90,6 +104,13 @@ const styles = StyleSheet.create({
   },
   chip: { paddingHorizontal: space.sm + 2, paddingVertical: 4, borderRadius: radius.pill, alignSelf: 'flex-start' },
   chipTexto: { fontSize: 12, fontWeight: '700' },
+  avatarCaja: { alignItems: 'center' },
+  insignia: {
+    position: 'absolute', bottom: -7, alignSelf: 'center',
+    width: 22, height: 22, borderRadius: 11,
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 2, borderColor: colors.background,
+  },
   avatar: {
     width: 44, height: 44, borderRadius: 22,
     backgroundColor: colors.brandSoft, alignItems: 'center', justifyContent: 'center',

@@ -124,6 +124,26 @@ export type Mensaje = {
   autor: string;
 };
 
+export type DiaDeLaSemana = {
+  fecha: string;
+  citas: number;
+  sin_confirmar: number;
+};
+
+export type HorarioDia = { dia: string; tramos: string[] };
+
+export type Centro = {
+  nombre: string;
+  direccion: string;
+  telefono: string;
+  email: string;
+  maps_url: string;
+  horario: HorarioDia[];
+  profesionales: { id: string; nombre: string; color: string; horario: HorarioDia[] }[];
+  servicios: { id: string; nombre: string; minutos: number; color: string }[];
+  bot: { conectado: boolean; confirma_solo: boolean; numero: string };
+};
+
 export const endpoints = {
   login: (email: string, password: string, device_name: string) =>
     api<{ token: string; usuario: Usuario }>('/auth/login/', {
@@ -134,7 +154,11 @@ export const endpoints = {
   me: (token: string) => api<{ usuario: Usuario; hoy: Resumen }>('/me/', { token }),
   pendientes: (token: string) => api<{ pendientes: Pendiente[] }>('/pendientes/', { token }),
   agenda: (token: string, fecha?: string) =>
-    api<{ fecha: string; citas: Cita[] }>(`/agenda/${fecha ? `?fecha=${fecha}` : ''}`, { token }),
+    api<{ fecha: string; citas: Cita[]; semana: DiaDeLaSemana[] }>(
+      `/agenda/${fecha ? `?fecha=${fecha}` : ''}`,
+      { token },
+    ),
+  centro: (token: string) => api<{ centro: Centro }>('/centro/', { token }),
   chats: (token: string) => api<{ chats: Chat[] }>('/chats/', { token }),
   chat: (token: string, id: string) =>
     api<{ chat: Chat; mensajes: Mensaje[] }>(`/chats/${id}/`, { token }),

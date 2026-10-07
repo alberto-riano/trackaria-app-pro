@@ -195,10 +195,15 @@ function Opcion({
 }
 
 function Burbuja({ mensaje }: { mensaje: Mensaje }) {
-  const mio = mensaje.de === 'centro';
   const esBot = mensaje.de === 'bot';
+  // El bot contesta **en nombre del centro**, no es el paciente. Ponerlo a la
+  // izquierda, del lado de quien escribe desde fuera, hacía leer la conversación
+  // al revés. Va a la derecha, con los mensajes del centro, y se distingue por
+  // el morado y por su firma.
+  const nuestro = mensaje.de === 'centro' || esBot;
+  const mio = mensaje.de === 'centro';
   return (
-    <View style={[styles.burbujaFila, mio && styles.burbujaFilaMia]}>
+    <View style={[styles.burbujaFila, nuestro && styles.burbujaFilaMia]}>
       <View style={[styles.burbuja, mio && styles.burbujaMia, esBot && styles.burbujaBot]}>
         {esBot ? (
           <View style={styles.firma}>

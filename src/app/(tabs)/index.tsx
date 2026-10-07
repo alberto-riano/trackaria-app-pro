@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Avatar, Boton, Card, Chip, EmptyState, Encabezado } from '@/components/ui';
@@ -48,19 +48,7 @@ export default function PendienteScreen() {
       contentContainerStyle={[styles.contenido, { paddingTop: insets.top + space.lg }]}
       showsVerticalScrollIndicator={false}
       refreshControl={<RefreshControl refreshing={refrescando} onRefresh={refrescar} tintColor={colors.brand} />}>
-      <Encabezado
-        titulo="Pendiente"
-        coletilla={usuario?.centro.nombre}
-        accion={
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Tu cuenta"
-            onPress={() => router.push('/cuenta')}
-            style={({ pressed }) => [styles.cuenta, pressed && { opacity: 0.7 }]}>
-            <Ionicons name="person-circle-outline" size={26} color={colors.muted} />
-          </Pressable>
-        }
-      />
+      <Encabezado titulo="Pendiente" coletilla={usuario?.centro.nombre} />
 
       {error || fallo ? (
         <View style={styles.error} accessibilityRole="alert">
@@ -184,7 +172,6 @@ function TarjetaCita({
 const styles = StyleSheet.create({
   contenido: { padding: space.lg, paddingBottom: space.xxl, gap: space.md },
   cargando: { marginTop: space.xxl },
-  cuenta: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', marginTop: space.sm },
   resumen: { fontSize: 15, color: colors.muted, fontWeight: '600', marginTop: -space.sm },
   lista: { gap: space.md },
   tarjeta: { flexDirection: 'row', gap: space.lg, padding: 0, overflow: 'hidden' },

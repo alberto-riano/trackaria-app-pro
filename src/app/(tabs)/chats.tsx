@@ -17,7 +17,12 @@ import { colors, radius, space } from '@/lib/theme';
  * Esto no pretende competir con WhatsApp leyendo: quien tenga el número en
  * coexistencia ya recibe los mensajes en su móvil. Lo que no tiene ahí es saber
  * **quién está contestando** —el bot o una persona— ni poder quitárselo de en
- * medio. Por eso cada fila dice de quién es la conversación ahora mismo.
+ * medio.
+ *
+ * Ese dato va en un icono colgado del avatar, donde cualquier chat pone el punto
+ * de estado, en vez de en una etiqueta con texto por fila: con veinte
+ * conversaciones, veinte veces la misma frase es ruido. Lo que significa cada
+ * icono se explica una vez, arriba.
  */
 export default function ChatsScreen() {
   const insets = useSafeAreaInsets();
@@ -34,6 +39,8 @@ export default function ChatsScreen() {
       showsVerticalScrollIndicator={false}
       refreshControl={<RefreshControl refreshing={refrescando} onRefresh={refrescar} tintColor={colors.brand} />}>
       <Encabezado titulo="Chats" coletilla={usuario?.centro.nombre} />
+
+      {chats && chats.length > 0 ? <Leyenda /> : null}
 
       {error ? (
         <View style={styles.error} accessibilityRole="alert">
@@ -60,13 +67,46 @@ export default function ChatsScreen() {
   );
 }
 
+/** Qué significa cada icono. Una vez, no en cada fila. */
+function Leyenda() {
+  return (
+    <View style={styles.leyenda}>
+      <View style={styles.leyendaItem}>
+        <Insignia bot />
+        <Text style={styles.leyendaTexto}>Lo lleva el bot</Text>
+      </View>
+      <View style={styles.leyendaItem}>
+        <Insignia bot={false} />
+        <Text style={styles.leyendaTexto}>Lo lleva el centro</Text>
+      </View>
+    </View>
+  );
+}
+
+function Insignia({ bot }: { bot: boolean }) {
+  return (
+    <View style={[styles.marca, { backgroundColor: bot ? colors.botSoft : colors.brandSoft }]}>
+      <Ionicons
+        name={bot ? 'desktop' : 'person'}
+        size={11}
+        color={bot ? colors.bot : colors.brandDark}
+      />
+    </View>
+  );
+}
+
 function Fila({ item }: { item: Chat }) {
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityLabel={`${item.persona}. ${item.bot ? 'Lo lleva el bot' : 'Lo lleva el centro'}`}
       onPress={() => router.push(`/chat/${item.id}`)}
       style={({ pressed }) => [styles.fila, pressed && { opacity: 0.7 }]}>
-      <Avatar nombre={item.persona} tono={item.esperando ? 'alerta' : 'neutral'} />
+      <Avatar
+        nombre={item.persona}
+        tono={item.esperando ? 'alerta' : 'neutral'}
+        insignia={<Insignia bot={item.bot} />}
+      />
 
       <View style={styles.texto}>
         <View style={styles.linea}>
@@ -78,20 +118,7 @@ function Fila({ item }: { item: Chat }) {
           {item.ultimo || 'Sin mensajes'}
         </Text>
 
-        <View style={styles.pie}>
-          {/* Quién lleva la conversación. Es el dato que no tienes en WhatsApp. */}
-          <View style={[styles.quien, item.bot ? styles.quienBot : styles.quienTuyo]}>
-            <Ionicons
-              name={item.bot ? 'sparkles' : 'person'}
-              size={11}
-              color={item.bot ? colors.bot : colors.brandDark}
-            />
-            <Text style={[styles.quienTexto, { color: item.bot ? colors.bot : colors.brandDark }]}>
-              {item.bot ? 'Lo lleva el bot' : 'La lleva el centro'}
-            </Text>
-          </View>
-          {item.esperando ? <Text style={styles.esperando}>· te está esperando</Text> : null}
-        </View>
+        {item.esperando ? <Text style={styles.esperando}>Te está esperando</Text> : null}
       </View>
 
       {item.sin_leer > 0 ? (
@@ -108,11 +135,15 @@ function Fila({ item }: { item: Chat }) {
 const styles = StyleSheet.create({
   contenido: { padding: space.lg, paddingBottom: space.xxl },
   cargando: { marginTop: space.xxl },
+  leyenda: { flexDirection: 'row', gap: space.lg, marginBottom: space.md, paddingHorizontal: space.xs },
+  leyendaItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  leyendaTexto: { fontSize: 12, color: colors.muted, fontWeight: '600' },
+  marca: { width: 20, height: 20, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   lista: { gap: space.sm },
   fila: {
     flexDirection: 'row', alignItems: 'center', gap: space.md,
     backgroundColor: colors.surface, borderRadius: radius.lg,
-    borderWidth: 1, borderColor: colors.border, padding: space.md,
+    borderWidth: 1, borderColor: colors.border, padding: space.md, paddingBottom: space.md + 4,
   },
   texto: { flex: 1, gap: 3 },
   linea: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
@@ -120,12 +151,7 @@ const styles = StyleSheet.create({
   cuando: { fontSize: 12, color: colors.faint },
   ultimo: { fontSize: 14, color: colors.muted },
   ultimoSinLeer: { color: colors.text, fontWeight: '600' },
-  pie: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 },
-  quien: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 7, paddingVertical: 3, borderRadius: radius.pill },
-  quienBot: { backgroundColor: colors.botSoft },
-  quienTuyo: { backgroundColor: colors.brandSoft },
-  quienTexto: { fontSize: 11, fontWeight: '700' },
-  esperando: { fontSize: 11, fontWeight: '700', color: colors.warning },
+  esperando: { fontSize: 11, fontWeight: '800', color: colors.warning, marginTop: 1 },
   error: {
     flexDirection: 'row', alignItems: 'center', gap: space.sm,
     backgroundColor: colors.dangerSoft, borderRadius: radius.md, padding: space.md, marginBottom: space.md,
