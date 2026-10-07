@@ -1,12 +1,14 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
-import { useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useState } from 'react';
+import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Avatar, Boton, Card, Chip, EmptyState, Encabezado } from '@/components/ui';
-import { dayTitle, hora, timeAgo } from '@/lib/format';
-import { CENTRO, PENDIENTES, type Pendiente } from '@/lib/mock';
+import { ApiError, endpoints, type Pendiente } from '@/lib/api';
+import { useDatos } from '@/lib/datos';
+import { comoFecha, dayTitle, minutosDesde, timeAgo } from '@/lib/format';
+import { useSession } from '@/lib/session';
 import { colors, radius, space } from '@/lib/theme';
 
 /**
@@ -18,26 +20,65 @@ import { colors, radius, space } from '@/lib/theme';
  */
 export default function PendienteScreen() {
   const insets = useSafeAreaInsets();
-  const [cola, setCola] = useState<Pendiente[]>(PENDIENTES);
+  const { usuario, token } = useSession();
+  const { datos, error, refrescando, refrescar, recargar } = useDatos(
+    useCallback((clave: string) => endpoints.pendientes(clave), []),
+  );
+  const [confirmando, setConfirmando] = useState('');
+  const [fallo, setFallo] = useState('');
 
-  function resolver(id: string) {
-    setCola((actual) => actual.filter((item) => item.id !== id));
+  const cola = datos?.pendientes ?? null;
+
+  async function confirmar(id: string) {
+    if (!token) return;
+    setConfirmando(id);
+    setFallo('');
+    try {
+      await endpoints.confirmarCita(token, id);
+      await recargar();
+    } catch (problema) {
+      setFallo(problema instanceof ApiError ? problema.message : 'No se ha podido confirmar.');
+    } finally {
+      setConfirmando('');
+    }
   }
 
   return (
     <ScrollView
       contentContainerStyle={[styles.contenido, { paddingTop: insets.top + space.lg }]}
-      showsVerticalScrollIndicator={false}>
-      <Encabezado titulo="Pendiente" coletilla={CENTRO} />
+      showsVerticalScrollIndicator={false}
+      refreshControl={<RefreshControl refreshing={refrescando} onRefresh={refrescar} tintColor={colors.brand} />}>
+      <Encabezado
+        titulo="Pendiente"
+        coletilla={usuario?.centro.nombre}
+        accion={
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Tu cuenta"
+            onPress={() => router.push('/cuenta')}
+            style={({ pressed }) => [styles.cuenta, pressed && { opacity: 0.7 }]}>
+            <Ionicons name="person-circle-outline" size={26} color={colors.muted} />
+          </Pressable>
+        }
+      />
 
-      {cola.length === 0 ? (
+      {error || fallo ? (
+        <View style={styles.error} accessibilityRole="alert">
+          <Ionicons name="alert-circle" size={18} color={colors.danger} />
+          <Text style={styles.errorTexto}>{error || fallo}</Text>
+        </View>
+      ) : null}
+
+      {cola === null ? (
+        <ActivityIndicator color={colors.brand} style={styles.cargando} />
+      ) : cola.length === 0 ? (
         <Card style={styles.tranquilo}>
           <View style={styles.tranquiloIcono}>
             <Ionicons name="checkmark-done" size={26} color={colors.brand} />
           </View>
           <EmptyState
             title="Nada que decidir"
-            text="El bot está llevando las conversaciones. Te avisamos en cuanto alguien pida cita o quiera hablar con una persona."
+            text="El bot está llevando las conversaciones. Aquí aparecerá quien pida hablar con una persona y las citas que falten por confirmar."
           />
         </Card>
       ) : (
@@ -47,10 +88,15 @@ export default function PendienteScreen() {
           </Text>
           <View style={styles.lista}>
             {cola.map((item) =>
-              item.tipo === 'agente' ? (
-                <TarjetaAgente key={item.id} item={item} onResolver={() => resolver(item.id)} />
+              item.tipo === 'conversacion' ? (
+                <TarjetaConversacion key={item.id} item={item} />
               ) : (
-                <TarjetaCita key={item.id} item={item} onResolver={() => resolver(item.id)} />
+                <TarjetaCita
+                  key={item.id}
+                  item={item}
+                  ocupado={confirmando === item.id}
+                  onConfirmar={() => confirmar(item.id)}
+                />
               ),
             )}
           </View>
@@ -61,20 +107,20 @@ export default function PendienteScreen() {
 }
 
 /** Cuánto lleva esperando. En rojo a partir de media hora, que es lo que duele. */
-function Espera({ desde }: { desde: Date }) {
-  const minutos = Math.floor((Date.now() - desde.getTime()) / 60_000);
-  const tarde = minutos >= 30;
+function Espera({ desde }: { desde: string }) {
+  if (!desde) return null;
+  const tarde = minutosDesde(desde) >= 30;
   return (
     <View style={styles.espera}>
       <Ionicons name="time-outline" size={14} color={tarde ? colors.danger : colors.faint} />
       <Text style={[styles.esperaTexto, tarde && { color: colors.danger, fontWeight: '700' }]}>
-        esperando {timeAgo(desde).replace('hace ', '')}
+        esperando {timeAgo(new Date(desde)).replace('hace ', '')}
       </Text>
     </View>
   );
 }
 
-function TarjetaAgente({ item, onResolver }: { item: Extract<Pendiente, { tipo: 'agente' }>; onResolver: () => void }) {
+function TarjetaConversacion({ item }: { item: Extract<Pendiente, { tipo: 'conversacion' }> }) {
   return (
     <Card style={styles.tarjeta}>
       <View style={[styles.franja, { backgroundColor: colors.warning }]} />
@@ -83,65 +129,53 @@ function TarjetaAgente({ item, onResolver }: { item: Extract<Pendiente, { tipo: 
           <Avatar nombre={item.persona} tono="alerta" />
           <View style={styles.cabeceraTexto}>
             <Text style={styles.persona}>{item.persona}</Text>
-            <Chip label="Quiere hablar contigo" tone="warning" />
+            <Chip label={item.motivo_texto} tone="warning" />
           </View>
         </View>
 
         {/* Lo que dijo, literal. Es lo único que te deja decidir si corre prisa. */}
-        <Text style={styles.cita}>«{item.mensaje}»</Text>
+        {item.mensaje ? <Text style={styles.cita}>«{item.mensaje}»</Text> : null}
 
         <Espera desde={item.desde} />
 
-        <Boton
-          titulo="Entrar en la conversación"
-          onPress={() => {
-            onResolver();
-            router.push('/chat/c1');
-          }}
-        />
+        <Boton titulo="Entrar en la conversación" onPress={() => router.push(`/chat/${item.id}`)} />
       </View>
     </Card>
   );
 }
 
-function TarjetaCita({ item, onResolver }: { item: Extract<Pendiente, { tipo: 'cita' }>; onResolver: () => void }) {
+function TarjetaCita({
+  item, ocupado, onConfirmar,
+}: {
+  item: Extract<Pendiente, { tipo: 'cita' }>;
+  ocupado: boolean;
+  onConfirmar: () => void;
+}) {
+  const { cita } = item;
   return (
     <Card style={styles.tarjeta}>
-      <View style={[styles.franja, { backgroundColor: item.hueco ? colors.brand : colors.danger }]} />
+      <View style={[styles.franja, { backgroundColor: cita.color || colors.brand }]} />
       <View style={styles.cuerpo}>
         <View style={styles.cabecera}>
           <Avatar nombre={item.persona} />
           <View style={styles.cabeceraTexto}>
             <Text style={styles.persona}>{item.persona}</Text>
-            <Chip label="Pide cita" tone="brand" />
+            <Chip label="Sin confirmar" tone="brand" />
           </View>
         </View>
 
         <View style={styles.hueco}>
           <Text style={styles.cuando}>
-            {dayTitle(item.cuando)} · {hora(item.cuando)}
+            {dayTitle(comoFecha(cita.fecha))} · {cita.hora}
           </Text>
           <Text style={styles.detalle}>
-            {item.tratamiento} · {item.profesional}
+            {[cita.tratamiento, cita.profesional].filter(Boolean).join(' · ')}
           </Text>
-          {item.hueco ? null : (
-            <View style={styles.ocupado}>
-              <Ionicons name="alert-circle" size={16} color={colors.danger} />
-              <Text style={styles.ocupadoTexto}>Ese hueco ya está cogido</Text>
-            </View>
-          )}
         </View>
 
         <Espera desde={item.desde} />
 
-        {item.hueco ? (
-          <View style={styles.botones}>
-            <Boton titulo="Confirmar" onPress={onResolver} style={styles.botonAncho} />
-            <Boton titulo="Otra hora" variante="secundario" onPress={onResolver} style={styles.botonAncho} />
-          </View>
-        ) : (
-          <Boton titulo="Proponerle otra hora" onPress={onResolver} />
-        )}
+        <Boton titulo={ocupado ? 'Confirmando…' : 'Confirmar la cita'} onPress={onConfirmar} />
       </View>
     </Card>
   );
@@ -149,6 +183,8 @@ function TarjetaCita({ item, onResolver }: { item: Extract<Pendiente, { tipo: 'c
 
 const styles = StyleSheet.create({
   contenido: { padding: space.lg, paddingBottom: space.xxl, gap: space.md },
+  cargando: { marginTop: space.xxl },
+  cuenta: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', marginTop: space.sm },
   resumen: { fontSize: 15, color: colors.muted, fontWeight: '600', marginTop: -space.sm },
   lista: { gap: space.md },
   tarjeta: { flexDirection: 'row', gap: space.lg, padding: 0, overflow: 'hidden' },
@@ -161,12 +197,13 @@ const styles = StyleSheet.create({
   hueco: { backgroundColor: colors.background, borderRadius: radius.md, padding: space.md, gap: 3 },
   cuando: { fontSize: 17, fontWeight: '800', color: colors.text },
   detalle: { fontSize: 14, color: colors.muted },
-  ocupado: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: space.xs },
-  ocupadoTexto: { fontSize: 14, fontWeight: '700', color: colors.danger },
   espera: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   esperaTexto: { fontSize: 13, color: colors.faint },
-  botones: { flexDirection: 'row', gap: space.sm },
-  botonAncho: { flex: 1 },
+  error: {
+    flexDirection: 'row', alignItems: 'center', gap: space.sm,
+    backgroundColor: colors.dangerSoft, borderRadius: radius.md, padding: space.md,
+  },
+  errorTexto: { flex: 1, fontSize: 14, color: colors.danger, fontWeight: '600' },
   tranquilo: { alignItems: 'center', gap: space.sm },
   tranquiloIcono: {
     width: 56, height: 56, borderRadius: 28, backgroundColor: colors.brandSoft,

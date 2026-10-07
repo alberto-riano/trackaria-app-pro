@@ -1,7 +1,9 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Tabs } from 'expo-router';
+import { useCallback } from 'react';
 
-import { PENDIENTES } from '@/lib/mock';
+import { endpoints } from '@/lib/api';
+import { useDatos } from '@/lib/datos';
 import { colors } from '@/lib/theme';
 
 /**
@@ -16,7 +18,9 @@ import { colors } from '@/lib/theme';
  * suscripción, soporte— se queda en el panel web a propósito.
  */
 export default function TabsLayout() {
-  const esperando = PENDIENTES.length;
+  // El número va en la pestaña para no tener que entrar a mirar si hay algo.
+  const { datos } = useDatos(useCallback((token: string) => endpoints.me(token), []));
+  const esperando = datos?.hoy.pendientes ?? 0;
 
   return (
     <Tabs

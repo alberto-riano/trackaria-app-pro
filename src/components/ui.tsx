@@ -62,11 +62,20 @@ export function EmptyState({ title, text }: { title: string; text?: string }) {
 }
 
 /** El título de cada pantalla, con el centro encima en pequeño. */
-export function Encabezado({ titulo, coletilla }: { titulo: string; coletilla?: string }) {
+export function Encabezado({
+  titulo, coletilla, accion,
+}: {
+  titulo: string;
+  coletilla?: string;
+  accion?: React.ReactNode;
+}) {
   return (
-    <View style={styles.encabezado}>
-      {coletilla ? <Text style={styles.coletilla}>{coletilla}</Text> : null}
-      <Text style={styles.titulo}>{titulo}</Text>
+    <View style={styles.encabezadoFila}>
+      <View style={styles.encabezado}>
+        {coletilla ? <Text style={styles.coletilla}>{coletilla}</Text> : null}
+        <Text style={styles.titulo}>{titulo}</Text>
+      </View>
+      {accion}
     </View>
   );
 }
@@ -97,7 +106,8 @@ const styles = StyleSheet.create({
   vacio: { alignItems: 'center', gap: space.sm, paddingVertical: space.xxl },
   vacioTitulo: { fontSize: 17, fontWeight: '700', color: colors.text },
   vacioTexto: { fontSize: 15, color: colors.muted, textAlign: 'center', lineHeight: 21 },
-  encabezado: { gap: 2, marginBottom: space.lg },
+  encabezadoFila: { flexDirection: 'row', alignItems: 'flex-start', gap: space.md, marginBottom: space.lg },
+  encabezado: { flex: 1, gap: 2 },
   coletilla: { fontSize: 14, color: colors.muted, fontWeight: '600' },
   titulo: { fontSize: 32, fontWeight: '800', color: colors.text, letterSpacing: -0.5 },
 });

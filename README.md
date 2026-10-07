@@ -31,13 +31,14 @@ suscripción y tickets de soporte **se quedan en el panel web**. Tres motivos:
 
 ## Estado
 
-Esqueleto visual. Las pantallas tiran de `src/lib/mock.ts` porque **todavía no
-hay API**: el panel de Trackaria es Django renderizado en servidor y no expone
-nada para el profesional. Los tipos de ese fichero son los que queremos pedirle
-al servidor cuando toque, para que las pantallas no cambien.
+Funciona contra el servidor de verdad. Se entra con la **misma cuenta del panel**
+—correo y contraseña—, y la clave se guarda en el llavero del móvil.
 
-Antes de la app hace falta el paso de servidor: que el bot deje en una cola lo
-que necesita una decisión humana.
+La API es `/api/pro/v1/` (app `pro_app` del repo del servidor). «Pendiente» junta
+dos cosas: los relevos que dejó el bot —quien pidió hablar con una persona y
+donde el bot se atascó— y las citas que creó sin confirmar.
+
+Falta: avisos push cuando entra algo en la cola.
 
 ## Desarrollo
 
@@ -45,6 +46,10 @@ que necesita una decisión humana.
 npm install
 npx expo start --go
 ```
+
+Apunta a producción por defecto. Para desarrollar contra el Django de tu Mac,
+descomenta la otra línea de `.env.local` con la IP de tu Mac en la wifi de ese
+momento: el móvil no sabe qué es «localhost».
 
 Comparte marca y convenciones con `trackaria-app`: mismo verde, mismos `space` y
 `radius`, comentarios en castellano explicando el **porqué**. El morado

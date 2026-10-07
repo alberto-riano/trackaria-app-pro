@@ -1,19 +1,39 @@
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { ActivityIndicator, View } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { SessionProvider, useSession } from '@/lib/session';
 import { colors } from '@/lib/theme';
 
-export default function RootLayout() {
+function RootNavigator() {
+  const { token, cargando } = useSession();
+
+  if (cargando) {
+    return (
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background }}>
+        <ActivityIndicator color={colors.brand} />
+      </View>
+    );
+  }
+
   return (
-    <>
-      <StatusBar style="dark" />
-      <Stack
-        screenOptions={{
-          headerTintColor: colors.brand,
-          headerTitleStyle: { color: colors.text },
-          contentStyle: { backgroundColor: colors.background },
-        }}>
+    <Stack
+      screenOptions={{
+        headerShadowVisible: false,
+        headerStyle: { backgroundColor: colors.background },
+        headerTintColor: colors.brand,
+        headerTitleStyle: { color: colors.text },
+        contentStyle: { backgroundColor: colors.background },
+      }}>
+      {/* Sin sesión solo existe la pantalla de entrar. Así no hay forma de llegar
+          por accidente a una pantalla que pediría datos del centro sin tenerlos. */}
+      <Stack.Protected guard={!token}>
+        <Stack.Screen name="entrar" options={{ headerShown: false }} />
+      </Stack.Protected>
+      <Stack.Protected guard={!!token}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="cuenta" options={{ title: 'Tu cuenta' }} />
         <Stack.Screen
           name="chat/[id]"
           options={{
@@ -23,7 +43,18 @@ export default function RootLayout() {
             headerBackButtonDisplayMode: 'minimal',
           }}
         />
-      </Stack>
-    </>
+      </Stack.Protected>
+    </Stack>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <SafeAreaProvider>
+      <StatusBar style="dark" />
+      <SessionProvider>
+        <RootNavigator />
+      </SessionProvider>
+    </SafeAreaProvider>
   );
 }

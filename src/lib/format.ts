@@ -7,6 +7,11 @@ function mayuscula(texto: string) {
   return texto.charAt(0).toUpperCase() + texto.slice(1);
 }
 
+/** Una fecha `2026-10-07` como objeto, sin que el huso la mueva un día. */
+export function comoFecha(iso: string) {
+  return new Date(`${iso}T00:00:00`);
+}
+
 /** «Hoy», «Mañana» o «Martes 14 de octubre». */
 export function dayTitle(fecha: Date) {
   const hoy = new Date();
@@ -35,6 +40,12 @@ export function timeAgo(fecha: Date) {
   if (horas < 24) return `hace ${horas} h`;
   const dias = Math.floor(horas / 24);
   return dias === 1 ? 'ayer' : `hace ${dias} días`;
+}
+
+/** Los minutos que lleva esperando, para decidir si ya es tarde. */
+export function minutosDesde(iso: string) {
+  if (!iso) return 0;
+  return Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 60_000));
 }
 
 /** Las iniciales para el círculo del avatar: «Paula Gil» -> «PG». */

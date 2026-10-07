@@ -1,49 +1,73 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Stack, useLocalSearchParams } from 'expo-router';
-import { useMemo, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import {
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
+  ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView,
+  StyleSheet, Text, TextInput, View,
 } from 'react-native';
 
+import { ApiError, endpoints, type Mensaje } from '@/lib/api';
+import { useDatos } from '@/lib/datos';
 import { hora } from '@/lib/format';
-import { CONVERSACIONES, MENSAJES, type Mensaje } from '@/lib/mock';
+import { useSession } from '@/lib/session';
 import { colors, radius, space } from '@/lib/theme';
 
 /**
  * Una conversación, con el mando del bot arriba.
  *
- * El control de «Bot / Tú» es el motivo de que esta pantalla exista. Mientras lo
- * lleva el bot **no se puede escribir**: si pudieras, acabaríais contestando los
- * dos a la vez a la misma persona. Para escribir hay que quitárselo, y eso es un
- * gesto explícito y reversible.
+ * El control de «Bot / Contesto yo» es el motivo de que esta pantalla exista.
+ * Mientras lo lleva el bot **no se puede escribir**: si pudieras, acabaríais
+ * contestando los dos a la vez a la misma persona. Para escribir hay que
+ * quitárselo, y eso es un gesto explícito y reversible.
  */
 export default function ChatScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const conversacion = CONVERSACIONES.find((item) => item.id === id) ?? CONVERSACIONES[0];
+  const { token } = useSession();
+  const { datos, error, recargar } = useDatos(
+    useCallback((clave: string) => endpoints.chat(clave, id), [id]),
+  );
 
-  const [bot, setBot] = useState(conversacion.bot);
   const [borrador, setBorrador] = useState('');
-  const [mios, setMios] = useState<Mensaje[]>([]);
+  const [enviando, setEnviando] = useState(false);
+  const [cambiando, setCambiando] = useState(false);
+  const [fallo, setFallo] = useState('');
   const scroll = useRef<ScrollView>(null);
 
-  const mensajes = useMemo(() => [...(MENSAJES[conversacion.id] ?? []), ...mios], [conversacion.id, mios]);
-  // El aviso de «te atiende una persona» se manda con el primer mensaje real, no
-  // al pulsar el botón: si intervienes y no llegas a escribir, nadie se entera.
-  const primerMensajeTuyo = mios.length === 0;
+  const chat = datos?.chat ?? null;
+  const mensajes = datos?.mensajes ?? [];
+  // Se mira si ya ha escrito alguien del centro: el aviso al paciente se manda
+  // con el primer mensaje real, así que solo hay que anunciarlo una vez.
+  const yaIntervenido = mensajes.some((mensaje) => mensaje.de === 'centro');
 
-  function enviar() {
+  async function enviar() {
     const texto = borrador.trim();
-    if (!texto) return;
-    setMios((actual) => [...actual, { id: `mio-${actual.length}`, de: 'yo', texto, cuando: new Date() }]);
-    setBorrador('');
-    setTimeout(() => scroll.current?.scrollToEnd({ animated: true }), 50);
+    if (!texto || !token || enviando) return;
+    setEnviando(true);
+    setFallo('');
+    try {
+      await endpoints.enviar(token, id, texto);
+      setBorrador('');
+      await recargar();
+      setTimeout(() => scroll.current?.scrollToEnd({ animated: true }), 50);
+    } catch (problema) {
+      setFallo(problema instanceof ApiError ? problema.message : 'No se ha podido enviar.');
+    } finally {
+      setEnviando(false);
+    }
+  }
+
+  async function cambiarMando(activo: boolean) {
+    if (!token || cambiando || chat?.bot === activo) return;
+    setCambiando(true);
+    setFallo('');
+    try {
+      await endpoints.bot(token, id, activo);
+      await recargar();
+    } catch (problema) {
+      setFallo(problema instanceof ApiError ? problema.message : 'No se ha podido cambiar.');
+    } finally {
+      setCambiando(false);
+    }
   }
 
   return (
@@ -51,21 +75,32 @@ export default function ChatScreen() {
       style={styles.pantalla}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 96 : 0}>
-      <Stack.Screen options={{ title: conversacion.persona }} />
+      <Stack.Screen options={{ title: chat?.persona ?? '' }} />
 
-      <Mando bot={bot} onCambiar={setBot} />
+      {chat ? <Mando bot={chat.bot} ocupado={cambiando} onCambiar={cambiarMando} /> : null}
 
-      <ScrollView
-        ref={scroll}
-        contentContainerStyle={styles.hilo}
-        showsVerticalScrollIndicator={false}
-        onContentSizeChange={() => scroll.current?.scrollToEnd({ animated: false })}>
-        {mensajes.map((mensaje) => (
-          <Burbuja key={mensaje.id} mensaje={mensaje} />
-        ))}
-      </ScrollView>
+      {error || fallo ? (
+        <View style={styles.error} accessibilityRole="alert">
+          <Ionicons name="alert-circle" size={18} color={colors.danger} />
+          <Text style={styles.errorTexto}>{error || fallo}</Text>
+        </View>
+      ) : null}
 
-      {bot ? (
+      {chat === null ? (
+        <ActivityIndicator color={colors.brand} style={styles.cargando} />
+      ) : (
+        <ScrollView
+          ref={scroll}
+          contentContainerStyle={styles.hilo}
+          showsVerticalScrollIndicator={false}
+          onContentSizeChange={() => scroll.current?.scrollToEnd({ animated: false })}>
+          {mensajes.map((mensaje) => (
+            <Burbuja key={mensaje.id} mensaje={mensaje} />
+          ))}
+        </ScrollView>
+      )}
+
+      {chat?.bot !== false ? (
         <View style={styles.bloqueado}>
           <Ionicons name="sparkles" size={18} color={colors.bot} />
           <Text style={styles.bloqueadoTexto}>
@@ -74,7 +109,7 @@ export default function ChatScreen() {
         </View>
       ) : (
         <View style={styles.barra}>
-          {primerMensajeTuyo ? (
+          {!yaIntervenido ? (
             <Text style={styles.aviso}>Al enviar, se le dirá que a partir de ahora le atiende una persona.</Text>
           ) : null}
           <View style={styles.campoFila}>
@@ -89,13 +124,14 @@ export default function ChatScreen() {
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Enviar"
+              disabled={!borrador.trim() || enviando}
               onPress={enviar}
               style={({ pressed }) => [
                 styles.enviar,
-                !borrador.trim() && styles.enviarApagado,
+                (!borrador.trim() || enviando) && styles.enviarApagado,
                 pressed && { opacity: 0.7 },
               ]}>
-              <Ionicons name="arrow-up" size={20} color="#fff" />
+              {enviando ? <ActivityIndicator color="#fff" size="small" /> : <Ionicons name="arrow-up" size={20} color="#fff" />}
             </Pressable>
           </View>
         </View>
@@ -105,11 +141,12 @@ export default function ChatScreen() {
 }
 
 /** Quién contesta. Dos opciones y siempre a la vista. */
-function Mando({ bot, onCambiar }: { bot: boolean; onCambiar: (valor: boolean) => void }) {
+function Mando({ bot, ocupado, onCambiar }: { bot: boolean; ocupado: boolean; onCambiar: (valor: boolean) => void }) {
   return (
     <View style={styles.mando}>
       <Opcion
         activa={bot}
+        ocupado={ocupado}
         icono="sparkles"
         texto="Lo lleva el bot"
         color={colors.bot}
@@ -118,6 +155,7 @@ function Mando({ bot, onCambiar }: { bot: boolean; onCambiar: (valor: boolean) =
       />
       <Opcion
         activa={!bot}
+        ocupado={ocupado}
         icono="person"
         texto="Contesto yo"
         color={colors.brandDark}
@@ -129,9 +167,10 @@ function Mando({ bot, onCambiar }: { bot: boolean; onCambiar: (valor: boolean) =
 }
 
 function Opcion({
-  activa, icono, texto, color, fondo, onPress,
+  activa, ocupado, icono, texto, color, fondo, onPress,
 }: {
   activa: boolean;
+  ocupado: boolean;
   icono: 'sparkles' | 'person';
   texto: string;
   color: string;
@@ -141,12 +180,13 @@ function Opcion({
   return (
     <Pressable
       accessibilityRole="radio"
-      accessibilityState={{ selected: activa }}
+      accessibilityState={{ selected: activa, disabled: ocupado }}
+      disabled={ocupado}
       onPress={onPress}
       style={({ pressed }) => [
         styles.opcion,
         activa && { backgroundColor: fondo, borderColor: color },
-        pressed && { opacity: 0.8 },
+        (pressed || ocupado) && { opacity: 0.8 },
       ]}>
       <Ionicons name={icono} size={15} color={activa ? color : colors.faint} />
       <Text style={[styles.opcionTexto, { color: activa ? color : colors.faint }]}>{texto}</Text>
@@ -155,7 +195,7 @@ function Opcion({
 }
 
 function Burbuja({ mensaje }: { mensaje: Mensaje }) {
-  const mio = mensaje.de === 'yo';
+  const mio = mensaje.de === 'centro';
   const esBot = mensaje.de === 'bot';
   return (
     <View style={[styles.burbujaFila, mio && styles.burbujaFilaMia]}>
@@ -166,8 +206,9 @@ function Burbuja({ mensaje }: { mensaje: Mensaje }) {
             <Text style={styles.firmaTexto}>Bot</Text>
           </View>
         ) : null}
+        {mio && mensaje.autor ? <Text style={styles.autor}>{mensaje.autor}</Text> : null}
         <Text style={[styles.burbujaTexto, mio && styles.burbujaTextoMio]}>{mensaje.texto}</Text>
-        <Text style={[styles.burbujaHora, mio && styles.burbujaHoraMia]}>{hora(mensaje.cuando)}</Text>
+        <Text style={[styles.burbujaHora, mio && styles.burbujaHoraMia]}>{hora(new Date(mensaje.cuando))}</Text>
       </View>
     </View>
   );
@@ -175,6 +216,7 @@ function Burbuja({ mensaje }: { mensaje: Mensaje }) {
 
 const styles = StyleSheet.create({
   pantalla: { flex: 1, backgroundColor: colors.background },
+  cargando: { marginTop: space.xxl },
   mando: {
     flexDirection: 'row', gap: space.sm, padding: space.md,
     backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border,
@@ -195,6 +237,7 @@ const styles = StyleSheet.create({
   burbujaMia: { backgroundColor: colors.brand, borderColor: colors.brand },
   firma: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   firmaTexto: { fontSize: 11, fontWeight: '800', color: colors.bot, letterSpacing: 0.3 },
+  autor: { fontSize: 11, fontWeight: '800', color: 'rgba(255,255,255,0.8)', letterSpacing: 0.3 },
   burbujaTexto: { fontSize: 15, color: colors.text, lineHeight: 21 },
   burbujaTextoMio: { color: '#fff' },
   burbujaHora: { fontSize: 11, color: colors.faint, alignSelf: 'flex-end' },
@@ -223,4 +266,9 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   enviarApagado: { backgroundColor: colors.faint },
+  error: {
+    flexDirection: 'row', alignItems: 'center', gap: space.sm,
+    backgroundColor: colors.dangerSoft, padding: space.md,
+  },
+  errorTexto: { flex: 1, fontSize: 14, color: colors.danger, fontWeight: '600' },
 });
