@@ -13,6 +13,7 @@
         "ITSAppUsesNonExemptEncryption": false,
         "CFBundleDevelopmentRegion": "es",
         "CFBundleLocalizations": [
+          "es",
           "es"
         ]
       }
@@ -57,6 +58,9 @@
     "runtimeVersion": {
       "policy": "appVersion"
     },
-    "icon": "./assets/images/icon.png"
+    "icon": "./assets/images/icon.png",
+    "updates": {
+      "url": "https://u.expo.dev/1a7da5c2-ed2a-40c1-9163-9e6396af668f"
+    }
   }
 }
