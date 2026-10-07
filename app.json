@@ -19,10 +19,23 @@
     },
     "android": {
       "package": "com.trackaria.pro",
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "adaptiveIcon": {
+        "backgroundColor": "#08766c",
+        "foregroundImage": "./assets/images/android-icon-foreground.png",
+        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+      }
     },
     "plugins": [
       "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#08766c",
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 140
+        }
+      ],
       [
         "expo-secure-store",
         {
@@ -43,6 +56,7 @@
     "owner": "trackaria",
     "runtimeVersion": {
       "policy": "appVersion"
-    }
+    },
+    "icon": "./assets/images/icon.png"
   }
 }
