@@ -1,4 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { router } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -31,7 +32,9 @@ export default function AgendaScreen() {
     useCallback((token: string) => endpoints.agenda(token, dia), [dia]),
   );
 
-  const todas = datos?.citas ?? null;
+  // Hasta que no llega el día pedido, se espera. Enseñar las citas del día
+  // anterior mientras tanto parecía que la agenda mentía.
+  const todas = datos && datos.fecha === dia ? datos.citas : null;
   const esHoy = dia === hoy;
   const ahora = new Date().toTimeString().slice(0, 5);
 
@@ -54,36 +57,26 @@ export default function AgendaScreen() {
 
   return (
     <>
-      <ScrollView
-        contentContainerStyle={[styles.contenido, { paddingTop: insets.top + space.lg }]}
-        showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refrescando} onRefresh={refrescar} tintColor={colors.brand} />}>
+      {/* La cabecera va fuera del scroll a propósito. Dentro, el deslizamiento
+          de la tira competía con el de la lista: como ningún dedo va
+          perfectamente horizontal, el scroll vertical se quedaba el gesto y la
+          semana no se movía. Y de paso el día que miras no se va de la pantalla
+          al bajar por las citas. */}
+      <View style={[styles.cabecera, { paddingTop: insets.top + space.lg }]}>
         <Encabezado
           titulo={dayTitle(comoFecha(dia))}
           coletilla={usuario?.centro.nombre}
           // Una fecha larga como «Jueves 15 de octubre» a tamaño de titular
           // ocupaba dos líneas y media pantalla antes de enseñar una sola cita.
           contenido
-
           accion={
-            <View style={styles.acciones}>
-              {!esHoy ? (
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel="Volver a hoy"
-                  onPress={() => setDia(hoy)}
-                  style={({ pressed }) => [styles.boton, pressed && { opacity: 0.7 }]}>
-                  <Ionicons name="today-outline" size={20} color={colors.brandDark} />
-                </Pressable>
-              ) : null}
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Elegir un día"
-                onPress={() => setCalendario(true)}
-                style={({ pressed }) => [styles.boton, pressed && { opacity: 0.7 }]}>
-                <Ionicons name="calendar-outline" size={20} color={colors.brandDark} />
-              </Pressable>
-            </View>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Elegir un día"
+              onPress={() => setCalendario(true)}
+              style={({ pressed }) => [styles.boton, pressed && { opacity: 0.7 }]}>
+              <Ionicons name="calendar-outline" size={20} color={colors.brandDark} />
+            </Pressable>
           }
         />
 
@@ -105,7 +98,12 @@ export default function AgendaScreen() {
             ))}
           </ScrollView>
         ) : null}
+      </View>
 
+      <ScrollView
+        contentContainerStyle={styles.contenido}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refrescando} onRefresh={refrescar} tintColor={colors.brand} />}>
         {error ? (
           <View style={styles.error} accessibilityRole="alert">
             <Ionicons name="alert-circle" size={18} color={colors.danger} />
@@ -172,7 +170,11 @@ function Filtro({ etiqueta, activo, onPress }: { etiqueta: string; activo: boole
 
 function Fila({ cita, pasada }: { cita: Cita; pasada: boolean }) {
   return (
-    <View style={[styles.fila, pasada && styles.filaPasada]}>
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`${cita.hora}, ${cita.persona}`}
+      onPress={() => router.push(`/cita/${cita.id}`)}
+      style={({ pressed }) => [styles.fila, pasada && styles.filaPasada, pressed && { opacity: 0.7 }]}>
       {/* La hora fuera de la tarjeta y en una línea: la columna se lee sola de
           arriba abajo y se ve de un vistazo dónde están los huecos. */}
       <View style={styles.columnaHora}>
@@ -195,21 +197,25 @@ function Fila({ cita, pasada }: { cita: Cita; pasada: boolean }) {
             </View>
           ) : null}
         </View>
-        {pasada ? <Ionicons name="checkmark" size={18} color={colors.faint} /> : null}
+        <Ionicons
+          name={pasada ? 'checkmark' : 'chevron-forward'}
+          size={18}
+          color={colors.faint}
+        />
       </View>
-    </View>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
+  cabecera: { paddingHorizontal: space.lg, backgroundColor: colors.background },
   contenido: { padding: space.lg, paddingBottom: space.xxl },
   cargando: { marginTop: space.xxl },
-  acciones: { flexDirection: 'row', gap: space.xs, marginTop: space.sm },
   boton: {
     width: 40, height: 40, borderRadius: radius.md, backgroundColor: colors.brandSoft,
-    alignItems: 'center', justifyContent: 'center',
+    alignItems: 'center', justifyContent: 'center', marginTop: space.sm,
   },
-  filtros: { gap: space.xs, paddingVertical: space.md, paddingRight: space.lg },
+  filtros: { gap: space.xs, paddingTop: space.md, paddingRight: space.lg },
   filtro: {
     paddingHorizontal: space.md, paddingVertical: 5, borderRadius: radius.pill,
     backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
@@ -217,7 +223,7 @@ const styles = StyleSheet.create({
   filtroActivo: { backgroundColor: colors.text, borderColor: colors.text },
   filtroTexto: { fontSize: 13, fontWeight: '700', color: colors.muted },
   filtroTextoActivo: { color: '#fff' },
-  resumen: { marginTop: space.md, marginBottom: space.lg, gap: 2 },
+  resumen: { marginBottom: space.lg, gap: 2 },
   resumenTexto: { fontSize: 16, fontWeight: '700', color: colors.text },
   siguiente: { fontSize: 14, color: colors.muted },
   lista: { gap: space.sm },

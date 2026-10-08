@@ -80,6 +80,18 @@ export type Cita = {
   origen: string;
 };
 
+export type CitaDetalle = Cita & {
+  motivo: string;
+  descripcion: string;
+  origen_texto: string;
+  creada: string;
+  confirmada: string;
+  /** La conversación de esa persona, si tiene. */
+  chat: string;
+  /** Si ese chat es del que salió la cita, y no solo el del paciente. */
+  chat_del_origen: boolean;
+};
+
 export type Pendiente =
   | {
       tipo: 'conversacion';
@@ -170,6 +182,7 @@ export const endpoints = {
     api<{ mensajes: Mensaje[] }>(`/chats/${id}/enviar/`, { method: 'POST', token, body: { texto } }),
   bot: (token: string, id: string, activo: boolean) =>
     api<{ chat: Chat }>(`/chats/${id}/bot/`, { method: 'POST', token, body: { activo } }),
+  cita: (token: string, id: string) => api<{ cita: CitaDetalle }>(`/citas/${id}/`, { token }),
   confirmarCita: (token: string, id: string) =>
     api<{ cita: Cita }>(`/citas/${id}/confirmar/`, { method: 'POST', token }),
 };

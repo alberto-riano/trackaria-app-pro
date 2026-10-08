@@ -63,6 +63,7 @@ function RootNavigator() {
       </Stack.Protected>
       <Stack.Protected guard={!!token}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="cita/[id]" options={{ title: 'Cita' }} />
         <Stack.Screen
           name="chat/[id]"
           options={{

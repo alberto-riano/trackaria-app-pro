@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { AppState } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import * as Notifications from 'expo-notifications';
@@ -36,15 +36,17 @@ export function useDatos<T>(cargar: (token: string) => Promise<T>, { cada }: Opc
   const [datos, setDatos] = useState<T | null>(null);
   const [error, setError] = useState('');
   const [refrescando, setRefrescando] = useState(false);
-  // Para que los disparadores de fondo no vuelvan a montar los temporizadores
-  // cada vez que llegan datos nuevos.
-  const ultima = useRef(cargar);
-  ultima.current = cargar;
 
+  // `cargar` entra en las dependencias a propósito. Guardarlo en una ref para
+  // no rehacer los temporizadores parecía más fino, pero rompía justo lo que
+  // importa: al cambiar el día en la agenda, la función de carga cambia y la
+  // pantalla tiene que volver a pedir **ya**, no en el siguiente repaso. Quien
+  // llama ya la memoiza con sus propias dependencias, así que esto no se dispara
+  // en cada render.
   const recargar = useCallback(async () => {
     if (!token) return;
     try {
-      setDatos(await ultima.current(token));
+      setDatos(await cargar(token));
       setError('');
     } catch (fallo) {
       // Una sesión caducada no es un error que enseñar: es volver a entrar.
@@ -56,7 +58,7 @@ export function useDatos<T>(cargar: (token: string) => Promise<T>, { cada }: Opc
     } finally {
       setRefrescando(false);
     }
-  }, [token, salir]);
+  }, [token, salir, cargar]);
 
   // 1. Al mirar la pantalla. Y, mientras se mira, el repaso periódico.
   useFocusEffect(
