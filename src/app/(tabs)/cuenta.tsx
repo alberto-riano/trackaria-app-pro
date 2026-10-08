@@ -83,7 +83,7 @@ export default function CuentaScreen() {
           {/* Lo que trabaja solo por detrás. Es lo que explica por qué pasan
               cosas sin que nadie las haga, y lo que nadie recuerda si dejó
               conectado. */}
-          <Bloque titulo="Conectado">
+          <Bloque titulo="Conexiones">
             <Conexion
               icono="logo-whatsapp"
               color="#25D366"
@@ -106,7 +106,7 @@ export default function CuentaScreen() {
             />
             <View style={styles.separador} />
             <Conexion
-              icono="calendar"
+              icono="logo-google"
               color="#4285F4"
               titulo="Google Calendar"
               activo={centro.calendario.conectado}
@@ -122,6 +122,23 @@ export default function CuentaScreen() {
               }
             />
           </Bloque>
+
+          {centro.bot.configurado && centro.bot.reglas?.length ? (
+            <Bloque titulo="Cómo atiende el bot">
+              {centro.bot.saludo ? (
+                <View style={styles.saludo}>
+                  <Text style={styles.saludoEtiqueta}>SALUDA ASÍ</Text>
+                  <Text style={styles.saludoTexto}>«{centro.bot.saludo}»</Text>
+                </View>
+              ) : null}
+              {centro.bot.reglas.map((regla) => (
+                <View key={regla} style={styles.regla}>
+                  <Ionicons name="ellipse" size={5} color={colors.bot} />
+                  <Text style={styles.reglaTexto}>{regla}</Text>
+                </View>
+              ))}
+            </Bloque>
+          ) : null}
         </>
       )}
 
@@ -170,7 +187,7 @@ function Dato({ icono, texto }: { icono: 'location-outline' | 'call-outline'; te
 function Conexion({
   icono, color, titulo, activo, detalle, nota,
 }: {
-  icono: 'logo-whatsapp' | 'calendar';
+  icono: 'logo-whatsapp' | 'logo-google';
   color: string;
   titulo: string;
   activo: boolean;
@@ -244,6 +261,11 @@ const styles = StyleSheet.create({
   conexionDetalle: { fontSize: 14, color: colors.muted },
   conexionNota: { fontSize: 13, color: colors.faint, lineHeight: 18, marginTop: 1 },
   separador: { height: 1, backgroundColor: colors.border, marginVertical: space.xs },
+  saludo: { gap: 3, marginBottom: space.xs },
+  saludoEtiqueta: { fontSize: 10, fontWeight: '800', letterSpacing: 0.5, color: colors.faint },
+  saludoTexto: { fontSize: 14, color: colors.text, lineHeight: 20, fontStyle: 'italic' },
+  regla: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
+  reglaTexto: { flex: 1, fontSize: 14, color: colors.muted, lineHeight: 20 },
   enlace: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
     minHeight: 40, borderRadius: radius.md, backgroundColor: colors.brandSoft, marginTop: space.xs,

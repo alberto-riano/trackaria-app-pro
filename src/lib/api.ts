@@ -142,6 +142,7 @@ export type Centro = {
   profesionales: { id: string; nombre: string; color: string; horario: HorarioDia[] }[];
   whatsapp: { conectado: boolean; numero: string; confirma_solo: boolean; bot_activo: boolean };
   calendario: { conectado: boolean; nombre: string; cuenta: string; sincroniza: boolean };
+  bot: { configurado: boolean; activo?: boolean; saludo?: string; reglas?: string[] };
 };
 
 export const endpoints = {
@@ -159,6 +160,8 @@ export const endpoints = {
       { token },
     ),
   centro: (token: string) => api<{ centro: Centro }>('/centro/', { token }),
+  carga: (token: string, desde: string, hasta: string) =>
+    api<{ carga: DiaDeLaSemana[] }>(`/agenda/carga/?desde=${desde}&hasta=${hasta}`, { token }),
   chats: (token: string) => api<{ chats: Chat[] }>('/chats/', { token }),
   chat: (token: string, id: string) =>
     api<{ chat: Chat; mensajes: Mensaje[] }>(`/chats/${id}/`, { token }),

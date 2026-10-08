@@ -61,6 +61,10 @@ export default function AgendaScreen() {
         <Encabezado
           titulo={dayTitle(comoFecha(dia))}
           coletilla={usuario?.centro.nombre}
+          // Una fecha larga como «Jueves 15 de octubre» a tamaño de titular
+          // ocupaba dos líneas y media pantalla antes de enseñar una sola cita.
+          contenido
+
           accion={
             <View style={styles.acciones}>
               {!esHoy ? (

@@ -77,17 +77,19 @@ export function EmptyState({ title, text }: { title: string; text?: string }) {
 
 /** El título de cada pantalla, con el centro encima en pequeño. */
 export function Encabezado({
-  titulo, coletilla, accion,
+  titulo, coletilla, accion, contenido,
 }: {
   titulo: string;
   coletilla?: string;
   accion?: React.ReactNode;
+  /** Para títulos que son una fecha larga: siguen siendo el título, pero caben. */
+  contenido?: boolean;
 }) {
   return (
     <View style={styles.encabezadoFila}>
       <View style={styles.encabezado}>
         {coletilla ? <Text style={styles.coletilla}>{coletilla}</Text> : null}
-        <Text style={styles.titulo}>{titulo}</Text>
+        <Text style={[styles.titulo, contenido && styles.tituloContenido]}>{titulo}</Text>
       </View>
       {accion}
     </View>
@@ -131,4 +133,5 @@ const styles = StyleSheet.create({
   encabezado: { flex: 1, gap: 2 },
   coletilla: { fontSize: 14, color: colors.muted, fontWeight: '600' },
   titulo: { fontSize: 32, fontWeight: '800', color: colors.text, letterSpacing: -0.5 },
+  tituloContenido: { fontSize: 24, letterSpacing: -0.3 },
 });

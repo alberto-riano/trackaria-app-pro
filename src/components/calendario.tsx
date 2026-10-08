@@ -3,7 +3,9 @@ import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { BottomSheet } from '@/components/overlay';
+import { endpoints } from '@/lib/api';
 import { comoFecha, inicioDeMes, mismoMes, moverMes, semanasDelMes, tituloDeMes } from '@/lib/format';
+import { useSession } from '@/lib/session';
 import { colors, radius, space } from '@/lib/theme';
 
 const LETRAS = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
@@ -18,12 +20,33 @@ export function Calendario({
   onElegir: (iso: string) => void;
   onClose: () => void;
 }) {
+  const { token } = useSession();
   const [mes, setMes] = useState(() => inicioDeMes(elegido));
+  const [conCitas, setConCitas] = useState<Record<string, boolean>>({});
 
   // Si se abre desde otro día, empieza por su mes y no por el último que se miró.
   useEffect(() => {
     if (visible) setMes(inicioDeMes(elegido));
   }, [visible, elegido]);
+
+  // Los días con algo, del mes que se está mirando. Sin esto, elegir una fecha
+  // es ir probando a ciegas hasta dar con un día que tenga pacientes.
+  useEffect(() => {
+    if (!visible || !token) return;
+    let vigente = true;
+    const semanas = semanasDelMes(mes);
+    const desde = semanas[0][0];
+    const hasta = semanas[semanas.length - 1][6];
+    endpoints
+      .carga(token, desde, hasta)
+      .then(({ carga }) => {
+        if (vigente) setConCitas(Object.fromEntries(carga.map((dia) => [dia.fecha, true])));
+      })
+      // Si falla, el calendario sigue sirviendo para elegir día: solo se queda
+      // sin los puntos.
+      .catch(() => {});
+    return () => { vigente = false; };
+  }, [visible, mes, token]);
 
   return (
     <BottomSheet visible={visible} onClose={onClose} cerrarLabel="Cerrar el calendario">
@@ -62,6 +85,11 @@ export function Calendario({
                   ]}>
                   {comoFecha(iso).getDate()}
                 </Text>
+                <View style={styles.marca}>
+                  {conCitas[iso] ? (
+                    <View style={[styles.punto, activo && styles.puntoElegido]} />
+                  ) : null}
+                </View>
               </Pressable>
             );
           })}
@@ -94,7 +122,10 @@ const styles = StyleSheet.create({
   letras: { flexDirection: 'row', marginBottom: space.xs },
   letra: { flex: 1, textAlign: 'center', fontSize: 11, fontWeight: '800', color: colors.faint },
   semana: { flexDirection: 'row' },
-  celda: { flex: 1, aspectRatio: 1, alignItems: 'center', justifyContent: 'center', borderRadius: radius.md },
+  celda: { flex: 1, aspectRatio: 1, alignItems: 'center', justifyContent: 'center', borderRadius: radius.md, gap: 2 },
+  marca: { height: 5, justifyContent: 'center' },
+  punto: { width: 4, height: 4, borderRadius: 2, backgroundColor: colors.brand },
+  puntoElegido: { backgroundColor: '#fff' },
   celdaElegida: { backgroundColor: colors.brand },
   numero: { fontSize: 16, fontWeight: '600', color: colors.text },
   numeroFuera: { color: colors.faint },
