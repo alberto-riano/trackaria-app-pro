@@ -2,6 +2,7 @@ import * as SecureStore from 'expo-secure-store';
 import { createContext, use, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import { ApiError, endpoints, type Usuario } from '@/lib/api';
+import { claveDelMovil, olvidarMovil, registrarMovil } from '@/lib/push';
 
 /**
  * Quién está dentro y su centro.
@@ -44,6 +45,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           const { usuario: quien } = await endpoints.me(guardado);
           setToken(guardado);
           setUsuario(quien);
+          // Se vuelve a apuntar en cada arranque: la clave de Expo cambia sola
+          // de vez en cuando, y un móvil con la clave vieja deja de sonar sin
+          // que nadie se entere.
+          registrarMovil(guardado);
         }
       } catch (error) {
         if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
@@ -62,16 +67,19 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     await SecureStore.setItemAsync(CLAVE, clave).catch(() => {});
     setToken(clave);
     setUsuario(quien);
+    registrarMovil(clave);
   }, []);
 
   const salir = useCallback(async () => {
     const clave = token;
+    const movil = await claveDelMovil();
     setToken(null);
     setUsuario(null);
     await SecureStore.deleteItemAsync(CLAVE).catch(() => {});
+    await olvidarMovil();
     // Se avisa al servidor después de cerrar por aquí: si la llamada falla, la
     // sesión ya está fuera de este móvil, que es lo que ha pedido quien la cierra.
-    if (clave) await endpoints.logout(clave).catch(() => {});
+    if (clave) await endpoints.logout(clave, movil).catch(() => {});
   }, [token]);
 
   const valor = useMemo(

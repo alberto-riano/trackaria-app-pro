@@ -41,6 +41,12 @@
         {
           "faceIDPermission": "Trackaria Pro guarda tu sesión en el llavero del móvil para que no tengas que entrar cada vez."
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#08766c"
+        }
       ]
     ],
     "experiments": {

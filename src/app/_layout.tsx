@@ -1,10 +1,38 @@
-import { Stack } from 'expo-router';
+import * as Notifications from 'expo-notifications';
+import { router, Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { useEffect } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { SessionProvider, useSession } from '@/lib/session';
 import { colors } from '@/lib/theme';
+
+/**
+ * Al tocar un aviso se abre aquello de lo que habla.
+ *
+ * Un aviso que te deja en la pantalla de inicio te obliga a buscar tú lo que
+ * acababa de contarte, que es justo lo que venía a ahorrarte.
+ */
+function AvisosTocados() {
+  const { token } = useSession();
+  const respuesta = Notifications.useLastNotificationResponse();
+
+  useEffect(() => {
+    if (!token || !respuesta) return;
+    if (respuesta.actionIdentifier !== Notifications.DEFAULT_ACTION_IDENTIFIER) return;
+    const datos = respuesta.notification.request.content.data as { conversacion?: string };
+    if (datos?.conversacion) {
+      router.push(`/chat/${datos.conversacion}`);
+    } else {
+      // Una cita por confirmar se resuelve desde «Pendiente», con su botón.
+      router.push('/');
+    }
+    Notifications.clearLastNotificationResponseAsync();
+  }, [respuesta, token]);
+
+  return null;
+}
 
 function RootNavigator() {
   const { token, cargando } = useSession();
@@ -18,6 +46,8 @@ function RootNavigator() {
   }
 
   return (
+    <>
+    <AvisosTocados />
     <Stack
       screenOptions={{
         headerShadowVisible: false,
@@ -44,6 +74,7 @@ function RootNavigator() {
         />
       </Stack.Protected>
     </Stack>
+    </>
   );
 }
 

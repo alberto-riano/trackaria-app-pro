@@ -151,7 +151,8 @@ export const endpoints = {
       method: 'POST',
       body: { email, password, device_name },
     }),
-  logout: (token: string) => api<{ ok: boolean }>('/auth/logout/', { method: 'POST', token }),
+  logout: (token: string, device_token?: string | null) =>
+    api<{ ok: boolean }>('/auth/logout/', { method: 'POST', token, body: { device_token } }),
   me: (token: string) => api<{ usuario: Usuario; hoy: Resumen }>('/me/', { token }),
   pendientes: (token: string) => api<{ pendientes: Pendiente[] }>('/pendientes/', { token }),
   agenda: (token: string, fecha?: string) =>

@@ -29,6 +29,7 @@ export default function ChatsScreen() {
   const { usuario } = useSession();
   const { datos, error, refrescando, refrescar } = useDatos(
     useCallback((token: string) => endpoints.chats(token), []),
+    { cada: 15_000 },
   );
 
   const chats = datos?.chats ?? null;

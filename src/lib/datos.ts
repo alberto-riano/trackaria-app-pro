@@ -1,26 +1,50 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { AppState } from 'react-native';
 import { useFocusEffect } from 'expo-router';
+import * as Notifications from 'expo-notifications';
 
 import { ApiError } from '@/lib/api';
 import { useSession } from '@/lib/session';
 
+type Opciones = {
+  /**
+   * Cada cuánto volver a preguntar mientras se está mirando la pantalla, en ms.
+   *
+   * Solo donde la frescura es el producto —los chats y lo que está pendiente—.
+   * No hace falta que sea rápido: lo urgente llega por aviso al móvil, y esto es
+   * la red por debajo para que una pantalla abierta no se quede congelada.
+   */
+  cada?: number;
+};
+
 /**
- * Cargar algo del servidor cada vez que se mira la pantalla.
+ * Cargar algo del servidor y mantenerlo al día.
  *
- * Al volver a una pestaña hay que recargar: entre que la miraste y ahora puede
- * haber entrado un mensaje o haberse confirmado una cita, y esta app existe
- * precisamente para enterarse de eso. Por eso `useFocusEffect` y no `useEffect`.
+ * Tres disparadores, por orden de lo que resuelve cada uno:
+ *
+ * 1. **Al mirar la pantalla.** Entre que la viste y ahora puede haber cambiado
+ *    todo, y esta app existe para enterarse de eso.
+ * 2. **Al volver a la app.** Volver del bolsillo es volver a mirar; sin esto, lo
+ *    que se ve es lo de hace una hora.
+ * 3. **Al llegar un aviso.** Si suena el móvil con la app abierta, la pantalla
+ *    tiene que enseñarlo ya, no cuando a alguien se le ocurra tirar de la lista.
+ *
+ * Y, donde se pide, un repaso cada tantos segundos como red por debajo.
  */
-export function useDatos<T>(cargar: (token: string) => Promise<T>) {
+export function useDatos<T>(cargar: (token: string) => Promise<T>, { cada }: Opciones = {}) {
   const { token, salir } = useSession();
   const [datos, setDatos] = useState<T | null>(null);
   const [error, setError] = useState('');
   const [refrescando, setRefrescando] = useState(false);
+  // Para que los disparadores de fondo no vuelvan a montar los temporizadores
+  // cada vez que llegan datos nuevos.
+  const ultima = useRef(cargar);
+  ultima.current = cargar;
 
   const recargar = useCallback(async () => {
     if (!token) return;
     try {
-      setDatos(await cargar(token));
+      setDatos(await ultima.current(token));
       setError('');
     } catch (fallo) {
       // Una sesión caducada no es un error que enseñar: es volver a entrar.
@@ -32,9 +56,31 @@ export function useDatos<T>(cargar: (token: string) => Promise<T>) {
     } finally {
       setRefrescando(false);
     }
-  }, [token, cargar, salir]);
+  }, [token, salir]);
 
-  useFocusEffect(useCallback(() => { recargar(); }, [recargar]));
+  // 1. Al mirar la pantalla. Y, mientras se mira, el repaso periódico.
+  useFocusEffect(
+    useCallback(() => {
+      recargar();
+      if (!cada) return;
+      const reloj = setInterval(() => {
+        // Con la app en segundo plano no se pregunta: gastaría batería y datos
+        // para refrescar algo que nadie está mirando.
+        if (AppState.currentState === 'active') recargar();
+      }, cada);
+      return () => clearInterval(reloj);
+    }, [recargar, cada]),
+  );
+
+  // 2. Al volver a la app y 3. al llegar un aviso.
+  useEffect(() => {
+    if (!token) return;
+    const vuelta = AppState.addEventListener('change', (estado) => {
+      if (estado === 'active') recargar();
+    });
+    const aviso = Notifications.addNotificationReceivedListener(() => { recargar(); });
+    return () => { vuelta.remove(); aviso.remove(); };
+  }, [token, recargar]);
 
   return {
     datos,

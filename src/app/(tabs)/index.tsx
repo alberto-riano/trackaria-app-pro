@@ -23,6 +23,7 @@ export default function PendienteScreen() {
   const { usuario, token } = useSession();
   const { datos, error, refrescando, refrescar, recargar } = useDatos(
     useCallback((clave: string) => endpoints.pendientes(clave), []),
+    { cada: 20_000 },
   );
   const [confirmando, setConfirmando] = useState('');
   const [fallo, setFallo] = useState('');

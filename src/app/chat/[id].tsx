@@ -25,6 +25,9 @@ export default function ChatScreen() {
   const { token } = useSession();
   const { datos, error, recargar } = useDatos(
     useCallback((clave: string) => endpoints.chat(clave, id), [id]),
+    // Una conversación abierta es lo más parecido a WhatsApp que hay aquí:
+    // mientras la miras, los mensajes que entran tienen que aparecer solos.
+    { cada: 8_000 },
   );
 
   const [borrador, setBorrador] = useState('');
