@@ -140,8 +140,8 @@ export type Centro = {
   maps_url: string;
   horario: HorarioDia[];
   profesionales: { id: string; nombre: string; color: string; horario: HorarioDia[] }[];
-  servicios: { id: string; nombre: string; minutos: number; color: string }[];
-  bot: { conectado: boolean; confirma_solo: boolean; numero: string };
+  whatsapp: { conectado: boolean; numero: string; confirma_solo: boolean; bot_activo: boolean };
+  calendario: { conectado: boolean; nombre: string; cuenta: string; sincroniza: boolean };
 };
 
 export const endpoints = {

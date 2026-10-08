@@ -85,12 +85,8 @@ function Leyenda() {
 
 function Insignia({ bot }: { bot: boolean }) {
   return (
-    <View style={[styles.marca, { backgroundColor: bot ? colors.botSoft : colors.brandSoft }]}>
-      <Ionicons
-        name={bot ? 'desktop' : 'person'}
-        size={11}
-        color={bot ? colors.bot : colors.brandDark}
-      />
+    <View style={[styles.marca, { backgroundColor: bot ? colors.botFuerte : colors.centroFuerte }]}>
+      <Ionicons name={bot ? 'desktop' : 'person'} size={11} color="#fff" />
     </View>
   );
 }

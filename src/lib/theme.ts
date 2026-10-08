@@ -26,6 +26,10 @@ export const colors = {
   // paciente: de un vistazo tienes que saber quién ha escrito eso.
   bot: '#6d28d9',
   botSoft: '#f5f3ff',
+  // Y los dos de las insignias, que van rellenos. Pálidos se confundían con el
+  // círculo de las iniciales, que es justo lo que tenían que distinguir.
+  botFuerte: '#7c3aed',
+  centroFuerte: '#0f766e',
 } as const;
 
 export const radius = { sm: 8, md: 12, lg: 18, pill: 999 } as const;

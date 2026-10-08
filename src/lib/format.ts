@@ -64,3 +64,54 @@ export function iniciales(nombre: string) {
     .map((parte) => parte[0].toUpperCase())
     .join('');
 }
+
+/** Sumar días a una fecha en ISO, sin tocar husos. */
+export function sumarDias(iso: string, dias: number) {
+  const fecha = comoFecha(iso);
+  fecha.setDate(fecha.getDate() + dias);
+  return enIso(fecha);
+}
+
+/** El lunes de la semana en la que cae ese día. */
+export function lunesDe(iso: string) {
+  const fecha = comoFecha(iso);
+  return sumarDias(iso, -((fecha.getDay() + 6) % 7));
+}
+
+const MESES_LARGOS = MESES;
+
+/** «Octubre de 2026», para la cabecera del calendario. */
+export function tituloDeMes(iso: string) {
+  const fecha = comoFecha(iso);
+  return mayuscula(`${MESES_LARGOS[fecha.getMonth()]} de ${fecha.getFullYear()}`);
+}
+
+/** El día 1 de ese mes. */
+export function inicioDeMes(iso: string) {
+  return `${iso.slice(0, 7)}-01`;
+}
+
+export function moverMes(iso: string, meses: number) {
+  const fecha = comoFecha(inicioDeMes(iso));
+  fecha.setMonth(fecha.getMonth() + meses);
+  return enIso(fecha);
+}
+
+/** Las semanas de un mes, de lunes a domingo, con los días de al lado incluidos. */
+export function semanasDelMes(iso: string) {
+  const primero = inicioDeMes(iso);
+  const ultimo = enIso(new Date(comoFecha(primero).getFullYear(), comoFecha(primero).getMonth() + 1, 0));
+  const semanas: string[][] = [];
+  let lunes = lunesDe(primero);
+  while (lunes <= ultimo) {
+    const desde = lunes;
+    semanas.push(Array.from({ length: 7 }, (_, salto) => sumarDias(desde, salto)));
+    lunes = sumarDias(lunes, 7);
+  }
+  return semanas;
+}
+
+/** Si ese día cae en el mes de la referencia. */
+export function mismoMes(iso: string, referencia: string) {
+  return iso.slice(0, 7) === referencia.slice(0, 7);
+}
