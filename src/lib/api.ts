@@ -175,7 +175,8 @@ export const endpoints = {
   centro: (token: string) => api<{ centro: Centro }>('/centro/', { token }),
   carga: (token: string, desde: string, hasta: string) =>
     api<{ carga: DiaDeLaSemana[] }>(`/agenda/carga/?desde=${desde}&hasta=${hasta}`, { token }),
-  chats: (token: string) => api<{ chats: Chat[] }>('/chats/', { token }),
+  chats: (token: string, busca = '') =>
+    api<{ chats: Chat[] }>(`/chats/${busca ? `?q=${encodeURIComponent(busca)}` : ''}`, { token }),
   chat: (token: string, id: string) =>
     api<{ chat: Chat; mensajes: Mensaje[] }>(`/chats/${id}/`, { token }),
   enviar: (token: string, id: string, texto: string) =>

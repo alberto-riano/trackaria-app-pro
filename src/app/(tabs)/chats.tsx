@@ -1,7 +1,9 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
-import { useCallback } from 'react';
-import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import {
+  ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Avatar, EmptyState, Encabezado } from '@/components/ui';
@@ -27,9 +29,21 @@ import { colors, radius, space } from '@/lib/theme';
 export default function ChatsScreen() {
   const insets = useSafeAreaInsets();
   const { usuario } = useSession();
+  const [texto, setTexto] = useState('');
+  const [busca, setBusca] = useState('');
+
+  // Se espera a que pare de escribir: una consulta por letra sería pedirle al
+  // servidor que busque «m», «mu», «mut»… para tirar las tres primeras.
+  useEffect(() => {
+    const reloj = setTimeout(() => setBusca(texto.trim()), 350);
+    return () => clearTimeout(reloj);
+  }, [texto]);
+
   const { datos, error, refrescando, refrescar } = useDatos(
-    useCallback((token: string) => endpoints.chats(token), []),
-    { cada: 15_000 },
+    useCallback((token: string) => endpoints.chats(token, busca), [busca]),
+    // Mientras se busca no se repasa solo: la lista cambiaría bajo el dedo
+    // mientras lees los resultados.
+    { cada: busca ? undefined : 15_000 },
   );
 
   const chats = datos?.chats ?? null;
@@ -41,7 +55,22 @@ export default function ChatsScreen() {
       refreshControl={<RefreshControl refreshing={refrescando} onRefresh={refrescar} tintColor={colors.brand} />}>
       <Encabezado titulo="Chats" coletilla={usuario?.centro.nombre} />
 
-      {chats && chats.length > 0 ? <Leyenda /> : null}
+      <View style={styles.buscador}>
+        <Ionicons name="search" size={17} color={colors.faint} />
+        <TextInput
+          style={styles.campo}
+          value={texto}
+          onChangeText={setTexto}
+          placeholder="Buscar por nombre o por lo que se dijo"
+          placeholderTextColor={colors.faint}
+          autoCapitalize="none"
+          autoCorrect={false}
+          returnKeyType="search"
+          clearButtonMode="while-editing"
+        />
+      </View>
+
+      {!busca && chats && chats.length > 0 ? <Leyenda /> : null}
 
       {error ? (
         <View style={styles.error} accessibilityRole="alert">
@@ -54,8 +83,12 @@ export default function ChatsScreen() {
         <ActivityIndicator color={colors.brand} style={styles.cargando} />
       ) : chats.length === 0 ? (
         <EmptyState
-          title="Todavía no hay conversaciones"
-          text="Aquí aparecerán los chats del WhatsApp de tu centro en cuanto alguien escriba."
+          title={busca ? 'Nada con eso' : 'Todavía no hay conversaciones'}
+          text={
+            busca
+              ? 'Se busca por el nombre, el teléfono y lo que se dijo en el chat.'
+              : 'Aquí aparecerán los chats del WhatsApp de tu centro en cuanto alguien escriba.'
+          }
         />
       ) : (
         <View style={styles.lista}>
@@ -132,6 +165,13 @@ function Fila({ item }: { item: Chat }) {
 const styles = StyleSheet.create({
   contenido: { padding: space.lg, paddingBottom: space.xxl },
   cargando: { marginTop: space.xxl },
+  buscador: {
+    flexDirection: 'row', alignItems: 'center', gap: space.sm,
+    backgroundColor: colors.surface, borderRadius: radius.md,
+    borderWidth: 1, borderColor: colors.border,
+    paddingHorizontal: space.md, marginBottom: space.md,
+  },
+  campo: { flex: 1, minHeight: 42, fontSize: 15, color: colors.text },
   leyenda: { flexDirection: 'row', gap: space.lg, marginBottom: space.md, paddingHorizontal: space.xs },
   leyendaItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   leyendaTexto: { fontSize: 12, color: colors.muted, fontWeight: '600' },
