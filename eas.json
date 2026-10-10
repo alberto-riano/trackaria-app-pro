@@ -7,7 +7,9 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
-      "ios": { "simulator": false },
+      "ios": {
+        "simulator": false
+      },
       "channel": "development"
     },
     "preview": {
@@ -16,7 +18,9 @@
         "EXPO_PUBLIC_API_URL": "https://fisio.trackaria.com/api/pro/v1"
       },
       "channel": "preview",
-      "android": { "buildType": "apk" }
+      "android": {
+        "buildType": "apk"
+      }
     },
     "production": {
       "autoIncrement": true,
@@ -27,6 +31,10 @@
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "ios": {
+        "ascAppId": "6821286278"
+      }
+    }
   }
 }
