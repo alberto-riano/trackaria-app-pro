@@ -53,7 +53,6 @@ export default function AgendaScreen() {
   );
 
   const sinConfirmar = citas.filter((cita) => cita.estado === 'requested').length;
-  const siguiente = esHoy ? citas.find((cita) => cita.hora >= ahora) : citas[0];
 
   return (
     <>
@@ -120,19 +119,15 @@ export default function AgendaScreen() {
           />
         ) : (
           <>
-            <View style={styles.resumen}>
-              <Text style={styles.resumenTexto}>
-                {citas.length === 1 ? '1 cita' : `${citas.length} citas`}
-                {sinConfirmar > 0 ? ` · ${sinConfirmar} sin confirmar` : ''}
-              </Text>
-              {siguiente ? (
-                <Text style={styles.siguiente}>
-                  {esHoy ? 'La siguiente' : 'La primera'}, {siguiente.hora} · {siguiente.persona}
-                </Text>
-              ) : (
-                <Text style={styles.siguiente}>No queda nada por hoy.</Text>
-              )}
-            </View>
+            {/* Un recuento y nada más. Antes había dos líneas diciendo cuántas
+                citas hay y cuál es la siguiente, y las dos sobran: las citas
+                están justo debajo, con su hora, en orden. */}
+            <Text style={styles.resumen}>
+              {citas.length === 1 ? '1 cita' : `${citas.length} citas`}
+              {sinConfirmar > 0 ? (
+                <Text style={styles.sinConfirmar}>  ·  {sinConfirmar} sin confirmar</Text>
+              ) : null}
+            </Text>
 
             <View style={styles.lista}>
               {citas.map((cita) => (
@@ -223,9 +218,8 @@ const styles = StyleSheet.create({
   filtroActivo: { backgroundColor: colors.text, borderColor: colors.text },
   filtroTexto: { fontSize: 13, fontWeight: '700', color: colors.muted },
   filtroTextoActivo: { color: '#fff' },
-  resumen: { marginBottom: space.lg, gap: 2 },
-  resumenTexto: { fontSize: 16, fontWeight: '700', color: colors.text },
-  siguiente: { fontSize: 14, color: colors.muted },
+  resumen: { fontSize: 13, fontWeight: '600', color: colors.faint, marginBottom: space.md },
+  sinConfirmar: { color: colors.warning, fontWeight: '700' },
   lista: { gap: space.sm },
   fila: { flexDirection: 'row', gap: space.md, alignItems: 'stretch' },
   filaPasada: { opacity: 0.55 },
