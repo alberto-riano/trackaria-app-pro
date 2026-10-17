@@ -11,7 +11,7 @@ import Constants from 'expo-constants';
 const BASE =
   process.env.EXPO_PUBLIC_API_URL ||
   (Constants.expoConfig?.extra as { apiUrl?: string } | undefined)?.apiUrl ||
-  'https://fisio.trackaria.com/api/pro/v1';
+  'https://app.trackaria.com/api/pro/v1';
 
 export class ApiError extends Error {
   status: number;
