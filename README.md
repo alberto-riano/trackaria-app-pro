@@ -10,18 +10,30 @@ valoraciones separadas.
 
 ## Qué hace
 
-Tres pestañas y ninguna más:
+Las pestañas que le toquen al centro:
 
 - **Pendiente** — lo único que justifica sacar el móvil: quién pide cita y quién
   ha pedido hablar con una persona. Es la pantalla de inicio.
 - **Chats** — las conversaciones del WhatsApp del centro, diciendo en cada una
   **quién está contestando**, el bot o tú.
-- **Agenda** — el día, para consultar.
+- **Agenda** — el día, para consultar. Solo si el centro tiene consulta.
+- **Clases** — las clases del día con sus plazas, y dentro de cada una quién
+  viene. Solo si el centro da clases.
+
+«Clases» es lo único que **cambia** datos, y solo dos cosas: apuntar a alguien y
+quitarlo. Son las dos que se hacen con una persona delante preguntando, que es
+justo lo que no puede esperar a llegar al ordenador. Dos detalles donde no se
+comporta como la app del alumno, a propósito: apunta sin mirar los días de
+antelación —esa regla existe para que nadie llene la agenda desde su móvil tres
+meses antes— y, al quitar a alguien, puede devolverle la clase aunque avise
+tarde, porque una urgencia la juzga el mostrador y no el reloj.
 
 ## Qué NO hace, a propósito
 
 Configuración, ajustes del bot, horarios, profesionales, Google Maps, cambio de
-suscripción y tickets de soporte **se quedan en el panel web**. Tres motivos:
+suscripción y tickets de soporte **se quedan en el panel web**. También los
+horarios de las clases, sus instructores y sus plazas: mover eso cambia la
+semana entera de un centro. Tres motivos:
 
 1. Son operaciones con consecuencias (tocan el calendario de Google, avisan a
    pacientes, cambian lo que se factura) y quieren una pantalla grande.

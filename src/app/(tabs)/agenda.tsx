@@ -54,6 +54,18 @@ export default function AgendaScreen() {
 
   const sinConfirmar = citas.filter((cita) => cita.estado === 'requested').length;
 
+  // La tira habla en neutro —cuántas cosas y si algo avisa— porque la comparte
+  // con las clases. Aquí «algo avisa» es que falte confirmar una cita.
+  const semana = useMemo(
+    () =>
+      (datos?.semana ?? []).map((dia) => ({
+        fecha: dia.fecha,
+        cuantas: dia.citas,
+        aviso: dia.sin_confirmar > 0,
+      })),
+    [datos?.semana],
+  );
+
   return (
     <>
       {/* La cabecera va fuera del scroll a propósito. Dentro, el deslizamiento
@@ -79,7 +91,7 @@ export default function AgendaScreen() {
           }
         />
 
-        <TiraSemanas elegido={dia} hoy={hoy} carga={datos?.semana ?? []} onElegir={setDia} />
+        <TiraSemanas elegido={dia} hoy={hoy} carga={semana} onElegir={setDia} />
 
         {profesionales.length > 1 ? (
           <ScrollView

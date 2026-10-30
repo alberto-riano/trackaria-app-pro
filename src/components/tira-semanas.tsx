@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
-import type { DiaDeLaSemana } from '@/lib/api';
+import type { DiaConCarga } from '@/lib/api';
 import { comoFecha, lunesDe, sumarDias } from '@/lib/format';
 import { colors, radius, space } from '@/lib/theme';
 
@@ -13,8 +13,15 @@ type Props = {
   /** El día que se está mirando. */
   elegido: string;
   hoy: string;
-  /** La carga de la semana del día elegido. De las demás no se sabe hasta llegar. */
-  carga: DiaDeLaSemana[];
+  /**
+   * La carga de la semana del día elegido. De las demás no se sabe hasta llegar.
+   *
+   * Va en una forma neutra —cuántas cosas hay y si alguna pide atención— y no en
+   * la de las citas: la misma tira sirve para la agenda y para las clases, y
+   * hablar de «citas sin confirmar» en la pestaña de clases era mentir en el
+   * nombre para no tocar un componente.
+   */
+  carga: DiaConCarga[];
   onElegir: (iso: string) => void;
 };
 
@@ -96,13 +103,13 @@ export function TiraSemanas({ elegido, hoy, carga, onElegir }: Props) {
                 {/* Cuánto hay, sin números: lo que se mira de reojo es si el día
                     está lleno o vacío, no si tiene cinco citas o seis. */}
                 <View style={styles.marca}>
-                  {dia && dia.citas > 0 ? (
+                  {dia && dia.cuantas > 0 ? (
                     <View
                       style={[
                         styles.punto,
                         { backgroundColor: activo ? '#fff' : colors.brand },
-                        dia.sin_confirmar > 0 && !activo && { backgroundColor: colors.warning },
-                        dia.citas >= 5 && styles.puntoLleno,
+                        dia.aviso && !activo && { backgroundColor: colors.warning },
+                        dia.cuantas >= 5 && styles.puntoLleno,
                       ]}
                     />
                   ) : null}

@@ -12,13 +12,18 @@ const LETRAS = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
 
 /** Saltar a un día cualquiera sin ir pasando semanas con el dedo. */
 export function Calendario({
-  visible, elegido, hoy, onElegir, onClose,
+  visible, elegido, hoy, onElegir, onClose, diasConAlgo,
 }: {
   visible: boolean;
   elegido: string;
   hoy: string;
   onElegir: (iso: string) => void;
   onClose: () => void;
+  /**
+   * Qué días del rango tienen algo, para los puntos. Por defecto, los de la
+   * agenda; la pestaña de clases pasa los suyos.
+   */
+  diasConAlgo?: (token: string, desde: string, hasta: string) => Promise<string[]>;
 }) {
   const { token } = useSession();
   const [mes, setMes] = useState(() => inicioDeMes(elegido));
@@ -37,16 +42,19 @@ export function Calendario({
     const semanas = semanasDelMes(mes);
     const desde = semanas[0][0];
     const hasta = semanas[semanas.length - 1][6];
-    endpoints
-      .carga(token, desde, hasta)
-      .then(({ carga }) => {
-        if (vigente) setConCitas(Object.fromEntries(carga.map((dia) => [dia.fecha, true])));
+    const pedir =
+      diasConAlgo ??
+      ((clave: string, inicio: string, fin: string) =>
+        endpoints.carga(clave, inicio, fin).then(({ carga }) => carga.map((dia) => dia.fecha)));
+    pedir(token, desde, hasta)
+      .then((dias) => {
+        if (vigente) setConCitas(Object.fromEntries(dias.map((fecha) => [fecha, true])));
       })
       // Si falla, el calendario sigue sirviendo para elegir día: solo se queda
       // sin los puntos.
       .catch(() => {});
     return () => { vigente = false; };
-  }, [visible, mes, token]);
+  }, [visible, mes, token, diasConAlgo]);
 
   return (
     <BottomSheet visible={visible} onClose={onClose} cerrarLabel="Cerrar el calendario">

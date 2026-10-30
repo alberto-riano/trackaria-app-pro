@@ -56,7 +56,14 @@ export type Usuario = {
   nombre: string;
   email: string;
   rol: string;
-  centro: { id: string; nombre: string };
+  centro: {
+    id: string;
+    nombre: string;
+    /** Qué pestañas tiene sentido enseñar en este centro. */
+    clases: boolean;
+    citas: boolean;
+    bonos: boolean;
+  };
 };
 
 export type Resumen = {
@@ -142,6 +149,84 @@ export type DiaDeLaSemana = {
   sin_confirmar: number;
 };
 
+/** Un día en la tira de semanas: cuánto hay y si algo pide atención. */
+export type DiaConCarga = {
+  fecha: string;
+  cuantas: number;
+  aviso?: boolean;
+};
+
+export type Clase = {
+  id: string;
+  nombre: string;
+  color: string;
+  icono: string;
+  imagen: string;
+  fecha: string;
+  hora: string;
+  fin: string;
+  minutos: number;
+  sala: string;
+  instructor: string;
+  plazas: number;
+  ocupadas: number;
+  libres: number;
+  cancelada: boolean;
+  motivo: string;
+  empezada: boolean;
+};
+
+export type Apuntado = {
+  id: string;
+  cliente: string;
+  nombre: string;
+  telefono: string;
+  /** Con qué entró: el nombre del bono, «Mensualidad» o «Clase a favor». */
+  paga: string;
+  /** Si tiene la plaza fija por su mensualidad. */
+  fijo: boolean;
+  estado: string;
+};
+
+export type ClaseDetalle = Clase & {
+  apuntados: Apuntado[];
+  espera: { id: string; nombre: string; ofrecida: boolean }[];
+  /** Si quitar a alguien ahora le devuelve la clase, según la regla del centro. */
+  devuelve: boolean;
+};
+
+export type Bono = {
+  id: string;
+  nombre: string;
+  quedan: number;
+  total: number;
+  /** La clase a la que se limita, si va limitado. */
+  clase: string;
+};
+
+export type Favor = { id: string; nombre: string; quedan: number };
+
+export type AlumnoBuscado = {
+  id: string;
+  nombre: string;
+  telefono: string;
+  apuntado: boolean;
+  /** Solo cuando se busca con una clase delante. */
+  bonos?: Bono[];
+  favores?: Favor[];
+};
+
+export type Alumno = {
+  id: string;
+  nombre: string;
+  telefono: string;
+  bonos: Bono[];
+  mensualidades: { id: string; desde: string; hasta: string; favores: number }[];
+  proximas: { id: string; nombre: string; fecha: string; hora: string }[];
+};
+
+export type CargaDeClases = { fecha: string; clases: number; completas: number };
+
 export type HorarioDia = { dia: string; tramos: string[] };
 
 export type Centro = {
@@ -186,4 +271,38 @@ export const endpoints = {
   cita: (token: string, id: string) => api<{ cita: CitaDetalle }>(`/citas/${id}/`, { token }),
   confirmarCita: (token: string, id: string) =>
     api<{ cita: Cita }>(`/citas/${id}/confirmar/`, { method: 'POST', token }),
+
+  // Las clases en grupo. Apuntar y quitar; los horarios siguen en el panel.
+  clases: (token: string, fecha?: string) =>
+    api<{ fecha: string; clases: Clase[]; semana: CargaDeClases[] }>(
+      `/clases/${fecha ? `?fecha=${fecha}` : ''}`,
+      { token },
+    ),
+  cargaDeClases: (token: string, desde: string, hasta: string) =>
+    api<{ carga: CargaDeClases[] }>(`/clases/carga/?desde=${desde}&hasta=${hasta}`, { token }),
+  clase: (token: string, id: string) => api<{ clase: ClaseDetalle }>(`/clases/${id}/`, { token }),
+  apuntar: (token: string, id: string, cliente: string, pago?: { bono?: string; mensualidad?: string }) =>
+    api<{ clase: ClaseDetalle }>(`/clases/${id}/apuntar/`, {
+      method: 'POST',
+      token,
+      body: { cliente, ...pago },
+    }),
+  quitar: (token: string, id: string, reserva: string, devolver?: boolean) =>
+    api<{ clase: ClaseDetalle }>(`/clases/${id}/quitar/`, {
+      method: 'POST',
+      token,
+      body: { reserva, ...(devolver === undefined ? {} : { devolver }) },
+    }),
+  alumnos: (token: string, busca = '', clase = '') =>
+    api<{ alumnos: AlumnoBuscado[] }>(
+      `/alumnos/?q=${encodeURIComponent(busca)}${clase ? `&clase=${clase}` : ''}`,
+      { token },
+    ),
+  alumno: (token: string, id: string) => api<{ alumno: Alumno }>(`/alumnos/${id}/`, { token }),
+  darBono: (token: string, id: string, clases: number, nombre = '') =>
+    api<{ bono: Bono; alumno: Alumno }>(`/alumnos/${id}/bonos/`, {
+      method: 'POST',
+      token,
+      body: { clases, nombre },
+    }),
 };
