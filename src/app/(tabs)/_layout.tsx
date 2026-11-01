@@ -35,8 +35,13 @@ import { colors } from '@/lib/theme';
  * eso se decide en el panel. Lo mismo la configuración, la suscripción y el
  * soporte, que no están aquí a propósito.
  *
- * Dentro de «Clases» sí se apunta y se quita gente: es lo que se hace con
- * alguien delante preguntando, y lo único que no puede esperar al ordenador.
+ * «Alumnos» acompaña a «Clases» porque media conversación del mostrador empieza
+ * por una persona y no por una clase: «¿me queda bono?» no se contesta mejor
+ * acordándose antes de a qué clase viene.
+ *
+ * Dentro de «Clases» sí se apunta y se quita gente, y dentro de «Alumnos» se da
+ * de alta y se venden bonos: es lo que se hace con alguien delante preguntando,
+ * y lo único que no puede esperar al panel.
  */
 export default function TabsLayout() {
   // El número va en la pestaña para no tener que entrar a mirar si hay algo.
@@ -55,13 +60,19 @@ export default function TabsLayout() {
   // Un servidor que todavía no manda el campo no debe hacer desaparecer nada.
   const hayWhatsapp = centro ? centro.whatsapp !== false : true;
 
+  // Un centro que lo tiene todo llega a seis pestañas, y a seis la palabra más
+  // larga —«Pendiente»— se corta en «Pendie…». Antes que esconderle una
+  // pestaña a ese centro, la letra baja un punto: siguen leyéndose enteras.
+  const pestanas = 2 + (hayWhatsapp ? 2 : 0) + (hayCitas ? 1 : 0) + (hayClases ? 1 : 0);
+  const letra = pestanas >= 6 ? 10 : 11;
+
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: colors.brand,
         tabBarInactiveTintColor: colors.faint,
-        tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
+        tabBarLabelStyle: { fontSize: letra, fontWeight: '600' },
         tabBarStyle: { borderTopColor: colors.border, backgroundColor: colors.surface },
         tabBarBadgeStyle: { backgroundColor: colors.danger, fontSize: 11, fontWeight: '700' },
         sceneStyle: { backgroundColor: colors.background },
@@ -101,6 +112,20 @@ export default function TabsLayout() {
         name="clases"
         options={{
           title: 'Clases',
+          href: hayClases ? undefined : null,
+          // Una figura en movimiento, no un grupo de gente: el grupo de gente
+          // es «Alumnos», y de dos en dos en la misma barra no se distinguían.
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons name={focused ? 'body' : 'body-outline'} color={color} size={size} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="alumnos"
+        options={{
+          title: 'Alumnos',
+          // Donde hay clases hay alumnos. En una clínica de consulta la gente
+          // son pacientes y se llevan desde la agenda, así que aquí no cabe.
           href: hayClases ? undefined : null,
           tabBarIcon: ({ color, size, focused }) => (
             <Ionicons name={focused ? 'people' : 'people-outline'} color={color} size={size} />

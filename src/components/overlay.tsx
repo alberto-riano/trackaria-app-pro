@@ -1,5 +1,8 @@
 import { type ReactNode, useEffect, useRef } from 'react';
-import { Animated, Easing, Modal, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
+import {
+  Animated, Easing, KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet,
+  useWindowDimensions, View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { colors, radius, space } from '@/lib/theme';
@@ -52,7 +55,15 @@ type Props = {
   cerrarLabel?: string;
 };
 
-/** Hoja que sube desde abajo: para elegir algo o decidir algo. */
+/**
+ * Hoja que sube desde abajo: para elegir algo o decidir algo.
+ *
+ * Va dentro de un `KeyboardAvoidingView` porque varias de estas hojas tienen un
+ * campo de texto, y una hoja pegada al borde de abajo es exactamente lo que
+ * tapa el teclado al abrirse: se escribía el nombre de alguien sin ver ni lo
+ * escrito ni los resultados. Así la hoja sube con el teclado y se queda entera
+ * a la vista.
+ */
 export function BottomSheet({ visible, onClose, children, cerrarLabel = 'Cerrar' }: Props) {
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
@@ -65,19 +76,28 @@ export function BottomSheet({ visible, onClose, children, cerrarLabel = 'Cerrar'
       <Animated.View style={[styles.fondo, { opacity: valor }]}>
         <Pressable style={StyleSheet.absoluteFill} onPress={cerrar} accessibilityLabel={cerrarLabel} />
       </Animated.View>
-      <Animated.View
-        style={[
-          styles.hoja,
-          {
-            paddingBottom: insets.bottom + space.lg,
-            transform: [{
-              translateY: valor.interpolate({ inputRange: [0, 1], outputRange: [height * 0.5, 0] }),
-            }],
-          },
-        ]}>
-        <View style={styles.asa} />
-        {children}
-      </Animated.View>
+      {/* `box-none` para que lo de arriba de la hoja siga siendo el fondo que
+          la cierra: el contenedor ocupa toda la pantalla, pero no la toca. */}
+      <KeyboardAvoidingView
+        style={styles.pegadoAbajo}
+        pointerEvents="box-none"
+        // En Android el propio sistema redimensiona la ventana, y encima
+        // «height» pelea con `statusBarTranslucent` y deja la hoja a medias.
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <Animated.View
+          style={[
+            styles.hoja,
+            {
+              paddingBottom: insets.bottom + space.lg,
+              transform: [{
+                translateY: valor.interpolate({ inputRange: [0, 1], outputRange: [height * 0.5, 0] }),
+              }],
+            },
+          ]}>
+          <View style={styles.asa} />
+          {children}
+        </Animated.View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
@@ -112,11 +132,8 @@ export function CenterCard({ visible, onClose, children, cerrarLabel = 'Cerrar' 
 
 const styles = StyleSheet.create({
   fondo: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(17,24,39,0.45)' },
+  pegadoAbajo: { flex: 1, justifyContent: 'flex-end' },
   hoja: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
     maxHeight: '85%',
     backgroundColor: colors.surface,
     borderTopLeftRadius: 24,

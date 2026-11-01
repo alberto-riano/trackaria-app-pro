@@ -192,8 +192,8 @@ export default function CuentaScreen() {
         <Ionicons name="desktop-outline" size={18} color={colors.muted} />
         <Text style={styles.panelTexto}>
           {hayCitas
-            ? 'Los horarios, el bot y las conexiones se cambian desde el panel de Trackaria, en el ordenador. Aquí solo se consulta.'
-            : 'Los horarios, las clases y los instructores se cambian desde el panel de Trackaria, en el ordenador. Aquí solo se consulta.'}
+            ? 'Los horarios, el bot y las conexiones se cambian desde el panel de Trackaria, en la versión web. Aquí solo se consulta.'
+            : 'Los horarios, las clases y los instructores se cambian desde el panel de Trackaria, en la versión web. Aquí solo se consulta.'}
         </Text>
       </View>
 

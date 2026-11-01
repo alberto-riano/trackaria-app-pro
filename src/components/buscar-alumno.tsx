@@ -1,5 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View,
 } from 'react-native';
@@ -25,6 +25,7 @@ export function useBusqueda(activa: boolean, clase?: string) {
   const { token } = useSession();
   const [busca, setBusca] = useState('');
   const [alumnos, setAlumnos] = useState<AlumnoBuscado[] | null>(null);
+  const [vuelta, setVuelta] = useState(0);
 
   // Cada apertura empieza limpia: se abre para buscar a alguien, no para
   // seguir donde se quedó la vez anterior.
@@ -44,9 +45,13 @@ export function useBusqueda(activa: boolean, clase?: string) {
         .catch(() => { if (vigente) setAlumnos([]); });
     }, ESPERA);
     return () => { vigente = false; clearTimeout(reloj); };
-  }, [activa, token, busca, clase]);
+  }, [activa, token, busca, clase, vuelta]);
 
-  return { busca, setBusca, alumnos };
+  // Para volver a preguntar sin cambiar lo escrito: quien da de alta a alguien
+  // desde otra pantalla espera encontrarlo aquí al volver, no una lista vieja.
+  const refrescar = useCallback(() => setVuelta((antes) => antes + 1), []);
+
+  return { busca, setBusca, alumnos, refrescar };
 }
 
 export function CampoDeBusqueda({
@@ -137,12 +142,14 @@ export function NoEsta({ busca, onAlta }: { busca: string; onAlta: () => void })
  * siete. Lo demás se completa en el panel cuando haya un rato.
  */
 export function AltaDeAlumno({
-  nombreSugerido, onVolver, onAlta,
+  nombreSugerido, onVolver, onAlta, volverTexto = 'Volver a buscar',
 }: {
   /** Lo que ya había escrito en la búsqueda, para no teclearlo dos veces. */
   nombreSugerido: string;
   onVolver: () => void;
   onAlta: (alumno: { id: string; nombre: string; telefono: string }, yaEstaba: boolean) => void;
+  /** Qué hay detrás. Desde una hoja que se abre sola no hay búsqueda a la que volver. */
+  volverTexto?: string;
 }) {
   const { token } = useSession();
   // Si lo que escribió lleva dígitos era un teléfono, no un nombre: el campo
@@ -176,7 +183,7 @@ export function AltaDeAlumno({
         onPress={onVolver}
         style={({ pressed }) => [styles.volver, pressed && { opacity: 0.7 }]}>
         <Ionicons name="chevron-back" size={18} color={colors.brandDark} />
-        <Text style={styles.volverTexto}>Volver a buscar</Text>
+        <Text style={styles.volverTexto}>{volverTexto}</Text>
       </Pressable>
 
       <Text style={styles.titulo}>Alguien nuevo</Text>

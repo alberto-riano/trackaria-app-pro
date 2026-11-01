@@ -327,7 +327,7 @@ export function Quitar({
 const styles = StyleSheet.create({
   titulo: { fontSize: 20, fontWeight: '800', color: colors.text, letterSpacing: -0.3 },
   coletilla: { fontSize: 14, color: colors.muted, marginTop: 2, lineHeight: 20 },
-  lista: { marginTop: space.md, maxHeight: 340 },
+  lista: { marginTop: space.md, flexShrink: 1, maxHeight: 340 },
   cargando: { marginVertical: space.xl },
   altaInline: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: space.sm,
