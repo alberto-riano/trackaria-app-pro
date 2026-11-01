@@ -28,6 +28,17 @@ export default function CuentaScreen() {
   );
 
   const centro = datos?.centro ?? null;
+  // Esta pantalla la miran dos negocios distintos. Un estudio de clases no
+  // tiene profesionales ni consulta, y enseñarle los huecos de eso —«todavía no
+  // hay profesionales dados de alta», «ningún número conectado»— es acusarle de
+  // tener a medias algo que no va a tener nunca.
+  const hayCitas = usuario?.centro.citas !== false;
+  const hayClases = usuario?.centro.clases === true;
+  const instructores = centro?.instructores ?? [];
+  // Las conexiones se enseñan si el centro las usa o si ya las tiene puestas:
+  // una clínica que todavía no conectó WhatsApp sí quiere verlo ahí.
+  const verWhatsapp = hayCitas || Boolean(centro?.whatsapp.conectado);
+  const verCalendario = hayCitas || Boolean(centro?.calendario.conectado);
 
   return (
     <ScrollView
@@ -64,64 +75,96 @@ export default function CuentaScreen() {
             ) : null}
           </Card>
 
-          <Bloque titulo={centro.profesionales.length === 1 ? 'Profesional' : 'Profesionales'}>
-            {centro.profesionales.length === 0 ? (
-              <Text style={styles.vacio}>Todavía no hay profesionales dados de alta.</Text>
-            ) : (
-              centro.profesionales.map((profesional) => (
-                <View key={profesional.id} style={styles.profesional}>
-                  <View style={[styles.punto, { backgroundColor: profesional.color || colors.brand }]} />
-                  <View style={styles.profesionalTexto}>
-                    <Text style={styles.profesionalNombre}>{profesional.nombre}</Text>
-                    <Horario dias={profesional.horario} vacio="Sigue el horario del centro." />
+          {hayClases ? (
+            <Bloque titulo={instructores.length === 1 ? 'Instructor' : 'Instructores'}>
+              {instructores.length === 0 ? (
+                <Text style={styles.vacio}>Todavía no hay instructores dados de alta.</Text>
+              ) : (
+                instructores.map((instructor) => (
+                  <View key={instructor.id} style={styles.profesional}>
+                    <View style={[styles.punto, { backgroundColor: instructor.color || colors.brand }]} />
+                    <View style={styles.profesionalTexto}>
+                      <Text style={styles.profesionalNombre}>{instructor.nombre}</Text>
+                      {/* Qué da, no su semana: a qué hora es cada clase ya está
+                          en la pestaña de Clases, con el día puesto. */}
+                      <Text style={styles.imparte}>
+                        {instructor.clases.length > 0
+                          ? instructor.clases.join('  ·  ')
+                          : 'Sin clases asignadas.'}
+                      </Text>
+                    </View>
                   </View>
-                </View>
-              ))
-            )}
-          </Bloque>
+                ))
+              )}
+            </Bloque>
+          ) : null}
+
+          {hayCitas ? (
+            <Bloque titulo={centro.profesionales.length === 1 ? 'Profesional' : 'Profesionales'}>
+              {centro.profesionales.length === 0 ? (
+                <Text style={styles.vacio}>Todavía no hay profesionales dados de alta.</Text>
+              ) : (
+                centro.profesionales.map((profesional) => (
+                  <View key={profesional.id} style={styles.profesional}>
+                    <View style={[styles.punto, { backgroundColor: profesional.color || colors.brand }]} />
+                    <View style={styles.profesionalTexto}>
+                      <Text style={styles.profesionalNombre}>{profesional.nombre}</Text>
+                      <Horario dias={profesional.horario} vacio="Sigue el horario del centro." />
+                    </View>
+                  </View>
+                ))
+              )}
+            </Bloque>
+          ) : null}
 
           {/* Lo que trabaja solo por detrás. Es lo que explica por qué pasan
               cosas sin que nadie las haga, y lo que nadie recuerda si dejó
               conectado. */}
-          <Bloque titulo="Conexiones">
-            <Conexion
-              icono="logo-whatsapp"
-              color="#25D366"
-              titulo="WhatsApp Business"
-              activo={centro.whatsapp.conectado}
-              detalle={
-                centro.whatsapp.conectado
-                  ? centro.whatsapp.numero
-                  : 'Ningún número conectado.'
-              }
-              nota={
-                centro.whatsapp.conectado
-                  ? centro.whatsapp.bot_activo
-                    ? centro.whatsapp.confirma_solo
-                      ? 'El bot contesta y las citas que reserva quedan confirmadas.'
-                      : 'El bot contesta y sus citas te esperan en «Pendiente».'
-                    : 'El bot está apagado: contestáis vosotros.'
-                  : ''
-              }
-            />
-            <View style={styles.separador} />
-            <Conexion
-              icono="logo-google"
-              color="#4285F4"
-              titulo="Google Calendar"
-              activo={centro.calendario.conectado}
-              detalle={
-                centro.calendario.conectado
-                  ? centro.calendario.nombre || centro.calendario.cuenta || 'Agenda sincronizada'
-                  : 'Sin conectar.'
-              }
-              nota={
-                centro.calendario.conectado && !centro.calendario.sincroniza
-                  ? 'La sincronización está pausada.'
-                  : ''
-              }
-            />
-          </Bloque>
+          {verWhatsapp || verCalendario ? (
+            <Bloque titulo="Conexiones">
+              {verWhatsapp ? (
+                <Conexion
+                  icono="logo-whatsapp"
+                  color="#25D366"
+                  titulo="WhatsApp Business"
+                  activo={centro.whatsapp.conectado}
+                  detalle={
+                    centro.whatsapp.conectado
+                      ? centro.whatsapp.numero
+                      : 'Ningún número conectado.'
+                  }
+                  nota={
+                    centro.whatsapp.conectado
+                      ? centro.whatsapp.bot_activo
+                        ? centro.whatsapp.confirma_solo
+                          ? 'El bot contesta y las citas que reserva quedan confirmadas.'
+                          : 'El bot contesta y sus citas te esperan en «Pendiente».'
+                        : 'El bot está apagado: contestáis vosotros.'
+                      : ''
+                  }
+                />
+              ) : null}
+              {verWhatsapp && verCalendario ? <View style={styles.separador} /> : null}
+              {verCalendario ? (
+                <Conexion
+                  icono="logo-google"
+                  color="#4285F4"
+                  titulo="Google Calendar"
+                  activo={centro.calendario.conectado}
+                  detalle={
+                    centro.calendario.conectado
+                      ? centro.calendario.nombre || centro.calendario.cuenta || 'Agenda sincronizada'
+                      : 'Sin conectar.'
+                  }
+                  nota={
+                    centro.calendario.conectado && !centro.calendario.sincroniza
+                      ? 'La sincronización está pausada.'
+                      : ''
+                  }
+                />
+              ) : null}
+            </Bloque>
+          ) : null}
 
           {centro.bot.configurado && centro.bot.reglas?.length ? (
             <Bloque titulo="Cómo atiende el bot">
@@ -145,8 +188,9 @@ export default function CuentaScreen() {
       <View style={styles.panel}>
         <Ionicons name="desktop-outline" size={18} color={colors.muted} />
         <Text style={styles.panelTexto}>
-          Los horarios, el bot y las conexiones se cambian desde el panel de Trackaria, en el
-          ordenador. Aquí solo se consulta.
+          {hayCitas
+            ? 'Los horarios, el bot y las conexiones se cambian desde el panel de Trackaria, en el ordenador. Aquí solo se consulta.'
+            : 'Los horarios, las clases y los instructores se cambian desde el panel de Trackaria, en el ordenador. Aquí solo se consulta.'}
         </Text>
       </View>
 
@@ -247,6 +291,7 @@ const styles = StyleSheet.create({
   punto: { width: 10, height: 10, borderRadius: 5, marginTop: 5 },
   profesionalTexto: { flex: 1, gap: 2 },
   profesionalNombre: { fontSize: 16, fontWeight: '700', color: colors.text },
+  imparte: { fontSize: 14, color: colors.muted },
   conexion: { flexDirection: 'row', gap: space.md, alignItems: 'flex-start' },
   conexionIcono: {
     width: 38, height: 38, borderRadius: radius.md, backgroundColor: colors.background,

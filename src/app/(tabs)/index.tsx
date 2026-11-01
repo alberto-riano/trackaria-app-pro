@@ -1,5 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { router } from 'expo-router';
+import { Redirect, router } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -12,13 +12,33 @@ import { useSession } from '@/lib/session';
 import { colors, radius, space } from '@/lib/theme';
 
 /**
+ * Por dónde se entra en la app.
+ *
+ * «Pendiente» es la casa de un centro con WhatsApp, no la de un estudio de
+ * clases: sin canal no hay bot, no hay conversaciones y esta pantalla no podría
+ * tener nada nunca. Las pestañas ya lo saben, pero la app abre por la primera,
+ * así que hay que mandarla a donde se trabaja de verdad.
+ *
+ * El desvío va aquí fuera y no dentro de la pantalla para que la pantalla no
+ * llegue a pedirle nada al servidor cuando no es la que toca.
+ */
+export default function Inicio() {
+  const { usuario } = useSession();
+  const centro = usuario?.centro;
+  if (centro && centro.whatsapp === false) {
+    return <Redirect href={centro.clases ? '/clases' : '/agenda'} />;
+  }
+  return <PendienteScreen />;
+}
+
+/**
  * Lo que espera una respuesta tuya.
  *
  * Es la razón de ser de la app. El bot atiende solo y lo hace bien casi siempre;
  * esta pantalla es el «casi». Si está vacía, la app no tiene nada que contarte y
  * eso es exactamente lo que debería pasar la mayoría de los días.
  */
-export default function PendienteScreen() {
+function PendienteScreen() {
   const insets = useSafeAreaInsets();
   const { usuario, token } = useSession();
   const { datos, error, refrescando, refrescar, recargar } = useDatos(
@@ -65,9 +85,15 @@ export default function PendienteScreen() {
           <View style={styles.tranquiloIcono}>
             <Ionicons name="checkmark-done" size={26} color={colors.brand} />
           </View>
+          {/* Un centro sin consulta no tiene citas que confirmar, y prometerle
+              que aparecerán aquí es dejarle esperando algo que no llega. */}
           <EmptyState
             title="Nada que decidir"
-            text="El bot está llevando las conversaciones. Aquí aparecerá quien pida hablar con una persona y las citas que falten por confirmar."
+            text={
+              usuario?.centro.citas === false
+                ? 'El bot está llevando las conversaciones. Aquí aparecerá quien pida hablar con una persona.'
+                : 'El bot está llevando las conversaciones. Aquí aparecerá quien pida hablar con una persona y las citas que falten por confirmar.'
+            }
           />
         </Card>
       ) : (

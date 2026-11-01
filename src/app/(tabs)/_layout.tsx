@@ -4,6 +4,7 @@ import { useCallback } from 'react';
 
 import { endpoints } from '@/lib/api';
 import { useDatos } from '@/lib/datos';
+import { useSession } from '@/lib/session';
 import { colors } from '@/lib/theme';
 
 /**
@@ -13,6 +14,16 @@ import { colors } from '@/lib/theme';
  * justifica mirar el móvil entre paciente y paciente es si hay algo esperando
  * una respuesta tuya. Chats, agenda, clases y cuenta son para consultar, y
  * consultar puede esperar.
+ *
+ * La misma app la usan dos negocios que no se parecen: una clínica con agenda y
+ * bot de WhatsApp, y un estudio que solo da clases. Ninguno de los dos debería
+ * notar que la app sirve también para el otro, así que aquí no hay pestañas
+ * apagadas: la que no aplica no existe.
+ *
+ * «Pendiente» y «Chats» necesitan WhatsApp. Sin canal no hay bot, no hay
+ * conversaciones y no puede haber nada pendiente **nunca**: no es que hoy esté
+ * vacío, es que no va a dejar de estarlo. Un estudio de clases abre la app
+ * directamente en Clases.
  *
  * «Agenda» y «Clases» salen solo si el centro las usa. Un estudio de pilates no
  * tiene consulta y una clínica de fisio puede no dar clases: enseñar una
@@ -31,11 +42,18 @@ export default function TabsLayout() {
   // El número va en la pestaña para no tener que entrar a mirar si hay algo.
   const { datos } = useDatos(useCallback((token: string) => endpoints.me(token), []));
   const esperando = datos?.hoy.pendientes ?? 0;
-  const centro = datos?.usuario.centro;
+
+  // Qué pestañas hay se decide con la sesión y no con esa carga: la sesión ya
+  // trae el centro comprobado desde el arranque, así que salen bien de
+  // primeras. Sacándolo de la carga, se verían aparecer y desaparecer.
+  const { usuario } = useSession();
+  const centro = usuario?.centro;
   // Mientras no se sabe, se enseña la agenda: es lo que tiene la mayoría, y
   // esconder las dos deja la app con dos pestañas durante un parpadeo.
   const hayCitas = centro ? centro.citas : true;
   const hayClases = centro ? centro.clases : false;
+  // Un servidor que todavía no manda el campo no debe hacer desaparecer nada.
+  const hayWhatsapp = centro ? centro.whatsapp !== false : true;
 
   return (
     <Tabs
@@ -52,6 +70,7 @@ export default function TabsLayout() {
         name="index"
         options={{
           title: 'Pendiente',
+          href: hayWhatsapp ? undefined : null,
           tabBarBadge: esperando > 0 ? esperando : undefined,
           tabBarIcon: ({ color, size, focused }) => (
             <Ionicons name={focused ? 'notifications' : 'notifications-outline'} color={color} size={size} />
@@ -62,6 +81,7 @@ export default function TabsLayout() {
         name="chats"
         options={{
           title: 'Chats',
+          href: hayWhatsapp ? undefined : null,
           tabBarIcon: ({ color, size, focused }) => (
             <Ionicons name={focused ? 'chatbubbles' : 'chatbubbles-outline'} color={color} size={size} />
           ),

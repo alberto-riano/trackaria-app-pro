@@ -50,7 +50,9 @@ export default function EntrarScreen() {
             <Ionicons name="pulse" size={28} color={colors.brand} />
           </View>
           <Text style={styles.titulo}>Trackaria Pro</Text>
-          <Text style={styles.coletilla}>Tu agenda y tu WhatsApp</Text>
+          {/* Aquí todavía no se sabe qué centro es, y a un estudio de clases
+              «tu agenda y tu WhatsApp» le nombra dos cosas que no tiene. */}
+          <Text style={styles.coletilla}>Tu centro, en el móvil</Text>
         </View>
 
         <View style={styles.campos}>

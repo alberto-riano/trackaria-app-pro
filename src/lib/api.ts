@@ -63,6 +63,14 @@ export type Usuario = {
     clases: boolean;
     citas: boolean;
     bonos: boolean;
+    /**
+     * Si el centro tiene WhatsApp conectado.
+     *
+     * Opcional porque puede faltar: un servidor sin desplegar todavía no lo
+     * manda, y entonces se da por bueno que sí. Quitar pestañas por un campo
+     * que no ha llegado sería peor que enseñarlas de más.
+     */
+    whatsapp?: boolean;
   };
 };
 
@@ -237,6 +245,8 @@ export type Centro = {
   maps_url: string;
   horario: HorarioDia[];
   profesionales: { id: string; nombre: string; color: string; horario: HorarioDia[] }[];
+  /** Quién da las clases. Otra gente y otra tabla que los profesionales. */
+  instructores?: { id: string; nombre: string; color: string; clases: string[] }[];
   whatsapp: { conectado: boolean; numero: string; confirma_solo: boolean; bot_activo: boolean };
   calendario: { conectado: boolean; nombre: string; cuenta: string; sincroniza: boolean };
   bot: { configurado: boolean; activo?: boolean; saludo?: string; reglas?: string[] };
