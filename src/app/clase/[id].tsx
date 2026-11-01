@@ -1,5 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Stack, useLocalSearchParams } from 'expo-router';
+import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
@@ -175,6 +175,13 @@ export default function ClaseScreen() {
   );
 }
 
+/**
+ * Alguien de la lista.
+ *
+ * Tocar el nombre abre su ficha —«¿le queda bono?» se pregunta mirando a quien
+ * tienes delante, que suele estar en la clase de ahora— y la ✕ le quita. La ✕
+ * se queda con el toque: va encima y es la que decide.
+ */
 function Persona({
   quien, sePuedeQuitar, onQuitar,
 }: {
@@ -184,13 +191,22 @@ function Persona({
 }) {
   return (
     <View style={styles.persona}>
-      <Avatar nombre={quien.nombre} />
-      <View style={styles.personaTexto}>
-        <Text style={styles.personaNombre} numberOfLines={1}>{quien.nombre}</Text>
-        <Text style={styles.personaPista} numberOfLines={1}>
-          {quien.fijo ? 'Plaza fija' : quien.paga || 'Sin bono'}
-        </Text>
-      </View>
+      {/* La ✕ va fuera del toque del nombre y no dentro: un botón metido en
+          otro botón deja sin decidir cuál de los dos manda, y al lector de
+          pantalla le suena como una sola cosa que hace dos. */}
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`Ver la ficha de ${quien.nombre}`}
+        onPress={() => router.push(`/alumno/${quien.cliente}`)}
+        style={({ pressed }) => [styles.personaToque, pressed && { opacity: 0.7 }]}>
+        <Avatar nombre={quien.nombre} />
+        <View style={styles.personaTexto}>
+          <Text style={styles.personaNombre} numberOfLines={1}>{quien.nombre}</Text>
+          <Text style={styles.personaPista} numberOfLines={1}>
+            {quien.fijo ? 'Plaza fija' : quien.paga || 'Sin bono'}
+          </Text>
+        </View>
+      </Pressable>
       {quien.estado === 'attended' ? (
         <Chip label="Vino" tone="success" />
       ) : quien.estado === 'no_show' ? (
@@ -244,7 +260,11 @@ const styles = StyleSheet.create({
   bloqueColetilla: { fontSize: 13, color: colors.faint, fontWeight: '600' },
   bloqueCard: { paddingVertical: space.sm },
   vacio: { fontSize: 14, color: colors.muted, paddingVertical: space.sm },
-  persona: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: space.sm },
+  persona: { flexDirection: 'row', alignItems: 'center', gap: space.md },
+  personaToque: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', gap: space.md,
+    paddingVertical: space.sm,
+  },
   personaTexto: { flex: 1, gap: 2 },
   personaNombre: { fontSize: 16, fontWeight: '700', color: colors.text },
   personaPista: { fontSize: 13, color: colors.muted },

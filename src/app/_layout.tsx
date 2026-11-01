@@ -64,6 +64,11 @@ function RootNavigator() {
       <Stack.Protected guard={!!token}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="cita/[id]" options={{ title: 'Cita' }} />
+        {/* Las dos de clases van declaradas aquí dentro por lo mismo que las
+            demás: una ruta que no está en el grupo protegido sigue existiendo,
+            y con un enlace directo se abría sin sesión y se quedaba girando. */}
+        <Stack.Screen name="clase/[id]" options={{ title: 'Clase' }} />
+        <Stack.Screen name="alumno/[id]" options={{ title: 'Alumno' }} />
         <Stack.Screen
           name="chat/[id]"
           options={{

@@ -1,29 +1,32 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useEffect, useState } from 'react';
 import {
-  ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View,
+  ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View,
 } from 'react-native';
 
+import {
+  AltaDeAlumno, CampoDeBusqueda, FilaDeAlumno, NoEsta, useBusqueda,
+} from '@/components/buscar-alumno';
 import { BottomSheet } from '@/components/overlay';
-import { Avatar, Boton } from '@/components/ui';
+import { Boton } from '@/components/ui';
 import { ApiError, endpoints, type AlumnoBuscado, type ClaseDetalle } from '@/lib/api';
 import { useSession } from '@/lib/session';
 import { colors, radius, space } from '@/lib/theme';
 
-/** Lo que se tarda en dejar de teclear antes de preguntar al servidor. */
-const ESPERA = 280;
-
 /**
  * Apuntar a alguien a una clase, en dos pasos.
  *
- * Primero quién —se busca por nombre o por teléfono, porque quien pregunta en
- * el mostrador dice una cosa o la otra— y después con qué paga. El segundo paso
- * no se salta aunque solo haya una opción: gastarle el bono que no era se
- * arregla a mano y con el alumno enfadado.
+ * Primero quién y después con qué paga. El segundo no se salta aunque solo haya
+ * una opción: gastarle el bono que no era se arregla a mano y con el alumno
+ * enfadado.
  *
  * Quien ya está dentro sale marcado y no se puede elegir. Antes se podía, y el
  * servidor contestaba «ya está apuntado»: un error evitable es un error que no
  * hay que enseñar.
+ *
+ * Y a quien no esté en el centro se le da de alta aquí mismo, sin salir de la
+ * hoja, siguiendo directo a cómo paga. Quien entra por la puerta preguntando
+ * por la clase de las siete no puede esperar a que alguien vaya al ordenador.
  */
 export function Apuntar({
   visible, clase, onClose, onApuntado,
@@ -34,33 +37,23 @@ export function Apuntar({
   onApuntado: (clase: ClaseDetalle) => void;
 }) {
   const { token } = useSession();
-  const [busca, setBusca] = useState('');
-  const [alumnos, setAlumnos] = useState<AlumnoBuscado[] | null>(null);
   const [elegido, setElegido] = useState<AlumnoBuscado | null>(null);
+  const [dandoDeAlta, setDandoDeAlta] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [fallo, setFallo] = useState('');
+
+  // La búsqueda se para en cuanto hay alguien elegido: lo que se mira entonces
+  // es cómo paga, y seguir preguntando al servidor es gasto de balde.
+  const { busca, setBusca, alumnos } = useBusqueda(visible && !elegido && !dandoDeAlta, clase.id);
 
   // Cada apertura empieza limpia: la hoja se abre para apuntar a alguien, no
   // para seguir donde se quedó la última vez.
   useEffect(() => {
     if (!visible) return;
-    setBusca('');
-    setAlumnos(null);
     setElegido(null);
+    setDandoDeAlta(false);
     setFallo('');
   }, [visible]);
-
-  useEffect(() => {
-    if (!visible || !token || elegido) return;
-    let vigente = true;
-    const reloj = setTimeout(() => {
-      endpoints
-        .alumnos(token, busca, clase.id)
-        .then(({ alumnos: encontrados }) => { if (vigente) setAlumnos(encontrados); })
-        .catch(() => { if (vigente) setAlumnos([]); });
-    }, ESPERA);
-    return () => { vigente = false; clearTimeout(reloj); };
-  }, [visible, token, busca, clase.id, elegido]);
 
   async function apuntar(pago?: { bono?: string; mensualidad?: string }) {
     if (!token || !elegido || guardando) return;
@@ -88,6 +81,19 @@ export function Apuntar({
           onVolver={() => { setElegido(null); setFallo(''); }}
           onElegir={apuntar}
         />
+      ) : dandoDeAlta ? (
+        <AltaDeAlumno
+          nombreSugerido={busca}
+          onVolver={() => setDandoDeAlta(false)}
+          onAlta={(alta) => {
+            // Recién dada de alta no tiene bonos, y si el teléfono ya estaba,
+            // los suyos no se han mirado contra esta clase. En los dos casos la
+            // respuesta honesta del paso siguiente es «sin bono para esta
+            // clase», que es la que sale con las listas vacías.
+            setDandoDeAlta(false);
+            setElegido({ ...alta, apuntado: false, bonos: [], favores: [] });
+          }}
+        />
       ) : (
         <Quien
           busca={busca}
@@ -95,6 +101,7 @@ export function Apuntar({
           libres={clase.libres}
           onBuscar={setBusca}
           onElegir={setElegido}
+          onAlta={() => setDandoDeAlta(true)}
         />
       )}
     </BottomSheet>
@@ -102,13 +109,14 @@ export function Apuntar({
 }
 
 function Quien({
-  busca, alumnos, libres, onBuscar, onElegir,
+  busca, alumnos, libres, onBuscar, onElegir, onAlta,
 }: {
   busca: string;
   alumnos: AlumnoBuscado[] | null;
   libres: number;
   onBuscar: (texto: string) => void;
   onElegir: (alumno: AlumnoBuscado) => void;
+  onAlta: () => void;
 }) {
   return (
     <>
@@ -121,61 +129,32 @@ function Quien({
             : `Quedan ${libres} plazas.`}
       </Text>
 
-      <View style={styles.buscador}>
-        <Ionicons name="search" size={18} color={colors.faint} />
-        <TextInput
-          value={busca}
-          onChangeText={onBuscar}
-          placeholder="Nombre o teléfono"
-          placeholderTextColor={colors.faint}
-          style={styles.campo}
-          autoCorrect={false}
-          autoCapitalize="words"
-          returnKeyType="search"
-        />
-        {busca ? (
-          <Pressable accessibilityRole="button" accessibilityLabel="Borrar" onPress={() => onBuscar('')}>
-            <Ionicons name="close-circle" size={18} color={colors.faint} />
-          </Pressable>
-        ) : null}
-      </View>
+      <CampoDeBusqueda valor={busca} onCambiar={onBuscar} />
 
       {alumnos === null ? (
         <ActivityIndicator color={colors.brand} style={styles.cargando} />
       ) : alumnos.length === 0 ? (
-        <Text style={styles.vacio}>
-          {busca
-            ? 'Nadie con ese nombre ni ese teléfono. Los alumnos nuevos se dan de alta en el panel.'
-            : 'Todavía no hay alumnos en tu centro.'}
-        </Text>
+        <NoEsta busca={busca} onAlta={onAlta} />
       ) : (
         <ScrollView style={styles.lista} keyboardShouldPersistTaps="handled">
           {alumnos.map((alumno) => (
-            <Pressable
+            <FilaDeAlumno
               key={alumno.id}
-              accessibilityRole="button"
-              accessibilityState={{ disabled: alumno.apuntado }}
-              disabled={alumno.apuntado}
+              alumno={alumno}
+              dentro={alumno.apuntado}
+              pista={alumno.apuntado ? 'Ya está en esta clase' : resumenDePago(alumno)}
               onPress={() => onElegir(alumno)}
-              style={({ pressed }) => [
-                styles.alumno,
-                alumno.apuntado && styles.alumnoDentro,
-                pressed && !alumno.apuntado && { opacity: 0.7 },
-              ]}>
-              <Avatar nombre={alumno.nombre} />
-              <View style={styles.alumnoTexto}>
-                <Text style={styles.alumnoNombre} numberOfLines={1}>{alumno.nombre}</Text>
-                <Text style={styles.alumnoPista} numberOfLines={1}>
-                  {alumno.apuntado ? 'Ya está en esta clase' : resumenDePago(alumno)}
-                </Text>
-              </View>
-              {alumno.apuntado ? (
-                <Ionicons name="checkmark-circle" size={20} color={colors.success} />
-              ) : (
-                <Ionicons name="chevron-forward" size={18} color={colors.faint} />
-              )}
-            </Pressable>
+            />
           ))}
+          {/* Debajo de los resultados también, no solo cuando no hay ninguno:
+              puede haber tres «Ana» y no ser ninguna la que tienes delante. */}
+          <Pressable
+            accessibilityRole="button"
+            onPress={onAlta}
+            style={({ pressed }) => [styles.altaInline, pressed && { opacity: 0.7 }]}>
+            <Ionicons name="person-add-outline" size={16} color={colors.brandDark} />
+            <Text style={styles.altaInlineTexto}>No está: darle de alta</Text>
+          </Pressable>
         </ScrollView>
       )}
     </>
@@ -283,9 +262,9 @@ function Opcion({
       <View style={styles.opcionIcono}>
         <Ionicons name={icono} size={18} color={colors.brandDark} />
       </View>
-      <View style={styles.alumnoTexto}>
-        <Text style={styles.alumnoNombre} numberOfLines={1}>{titulo}</Text>
-        <Text style={styles.alumnoPista} numberOfLines={1}>{pie}</Text>
+      <View style={styles.opcionTexto}>
+        <Text style={styles.opcionTitulo} numberOfLines={1}>{titulo}</Text>
+        <Text style={styles.opcionPie} numberOfLines={1}>{pie}</Text>
       </View>
       <Ionicons name="chevron-forward" size={18} color={colors.faint} />
     </Pressable>
@@ -348,23 +327,14 @@ export function Quitar({
 const styles = StyleSheet.create({
   titulo: { fontSize: 20, fontWeight: '800', color: colors.text, letterSpacing: -0.3 },
   coletilla: { fontSize: 14, color: colors.muted, marginTop: 2, lineHeight: 20 },
-  buscador: {
-    flexDirection: 'row', alignItems: 'center', gap: space.sm,
-    backgroundColor: colors.background, borderRadius: radius.md,
-    paddingHorizontal: space.md, marginTop: space.lg,
-  },
-  campo: { flex: 1, paddingVertical: space.md, fontSize: 16, color: colors.text },
   lista: { marginTop: space.md, maxHeight: 340 },
   cargando: { marginVertical: space.xl },
-  vacio: { fontSize: 14, color: colors.muted, lineHeight: 21, marginTop: space.lg, marginBottom: space.md },
-  alumno: {
-    flexDirection: 'row', alignItems: 'center', gap: space.md,
-    paddingVertical: space.sm + 2, paddingRight: space.xs,
+  altaInline: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: space.sm,
+    paddingVertical: space.md, marginTop: space.xs,
+    borderTopWidth: 1, borderTopColor: colors.border,
   },
-  alumnoDentro: { opacity: 0.55 },
-  alumnoTexto: { flex: 1, gap: 2 },
-  alumnoNombre: { fontSize: 16, fontWeight: '700', color: colors.text },
-  alumnoPista: { fontSize: 13, color: colors.muted },
+  altaInlineTexto: { fontSize: 14, fontWeight: '700', color: colors.brandDark },
   volver: { flexDirection: 'row', alignItems: 'center', gap: 2, marginBottom: space.sm, alignSelf: 'flex-start' },
   volverTexto: { fontSize: 14, fontWeight: '700', color: colors.brandDark },
   opcion: {
@@ -375,6 +345,9 @@ const styles = StyleSheet.create({
     width: 44, height: 44, borderRadius: 22, backgroundColor: colors.brandSoft,
     alignItems: 'center', justifyContent: 'center',
   },
+  opcionTexto: { flex: 1, gap: 2 },
+  opcionTitulo: { fontSize: 16, fontWeight: '700', color: colors.text },
+  opcionPie: { fontSize: 13, color: colors.muted },
   acciones: { gap: space.sm, marginTop: space.lg },
   error: {
     flexDirection: 'row', alignItems: 'center', gap: space.sm,

@@ -224,14 +224,28 @@ export type AlumnoBuscado = {
   favores?: Favor[];
 };
 
+/** Una clase suya: a la que viene, o a la que vino. */
+export type ClaseSuya = {
+  id: string;
+  nombre: string;
+  fecha: string;
+  hora: string;
+  /** Solo en las pasadas. `null` es «nadie pasó lista», no «faltó». */
+  vino?: boolean | null;
+};
+
 export type Alumno = {
   id: string;
   nombre: string;
   telefono: string;
   bonos: Bono[];
   mensualidades: { id: string; desde: string; hasta: string; favores: number }[];
-  proximas: { id: string; nombre: string; fecha: string; hora: string }[];
+  proximas: ClaseSuya[];
+  ultimas?: ClaseSuya[];
 };
+
+/** Una clase de las que da el centro, para atarle un bono. */
+export type TipoDeClase = { id: string; nombre: string; color: string };
 
 export type CargaDeClases = { fecha: string; clases: number; completas: number };
 
@@ -309,10 +323,19 @@ export const endpoints = {
       { token },
     ),
   alumno: (token: string, id: string) => api<{ alumno: Alumno }>(`/alumnos/${id}/`, { token }),
-  darBono: (token: string, id: string, clases: number, nombre = '') =>
+  darBono: (token: string, id: string, clases: number, nombre = '', clase = '') =>
     api<{ bono: Bono; alumno: Alumno }>(`/alumnos/${id}/bonos/`, {
       method: 'POST',
       token,
-      body: { clases, nombre },
+      body: { clases, nombre, ...(clase ? { clase } : {}) },
+    }),
+  tiposDeClase: (token: string) => api<{ tipos: TipoDeClase[] }>('/clases/tipos/', { token }),
+  // `ya_estaba` no es un error: ese teléfono ya tenía ficha y es a ella a donde
+  // quería llegar quien está preguntando.
+  crearAlumno: (token: string, nombre: string, telefono: string) =>
+    api<{ alumno: Alumno; ya_estaba: boolean }>('/alumnos/', {
+      method: 'POST',
+      token,
+      body: { nombre, telefono },
     }),
 };
