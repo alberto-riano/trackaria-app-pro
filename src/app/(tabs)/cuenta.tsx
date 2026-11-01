@@ -34,7 +34,10 @@ export default function CuentaScreen() {
   // tener a medias algo que no va a tener nunca.
   const hayCitas = usuario?.centro.citas !== false;
   const hayClases = usuario?.centro.clases === true;
-  const instructores = centro?.instructores ?? [];
+  // Sin el campo es que el servidor todavía no lo manda: no es lo mismo que
+  // mandarlo vacío. Decirle «todavía no hay instructores dados de alta» a un
+  // estudio que tiene tres sería el mismo error que se viene a arreglar.
+  const instructores = centro?.instructores;
   // Las conexiones se enseñan si el centro las usa o si ya las tiene puestas:
   // una clínica que todavía no conectó WhatsApp sí quiere verlo ahí.
   const verWhatsapp = hayCitas || Boolean(centro?.whatsapp.conectado);
@@ -75,7 +78,7 @@ export default function CuentaScreen() {
             ) : null}
           </Card>
 
-          {hayClases ? (
+          {hayClases && instructores ? (
             <Bloque titulo={instructores.length === 1 ? 'Instructor' : 'Instructores'}>
               {instructores.length === 0 ? (
                 <Text style={styles.vacio}>Todavía no hay instructores dados de alta.</Text>
