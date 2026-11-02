@@ -196,11 +196,24 @@ export type Apuntado = {
   estado: string;
 };
 
+/** Lo que queda por hacer después de cancelar una clase. */
+export type ResumenDeCancelar = {
+  afectados: number;
+  en_espera: number;
+  avisados: number;
+  /** A quién hay que llamar, porque no tiene la app y no se va a enterar. */
+  por_llamar: { id: string; nombre: string; telefono: string }[];
+  a_bono: number;
+  a_favor: number;
+};
+
 export type ClaseDetalle = Clase & {
   apuntados: Apuntado[];
   espera: { id: string; nombre: string; ofrecida: boolean }[];
   /** Si quitar a alguien ahora le devuelve la clase, según la regla del centro. */
   devuelve: boolean;
+  /** Si esta cuenta puede cancelar la clase. Lo decide el servidor, no el rol. */
+  puede_cancelar?: boolean;
 };
 
 export type Bono = {
@@ -367,6 +380,12 @@ export const endpoints = {
       method: 'POST',
       token,
       body: { para, titulo, texto },
+    }),
+  cancelarClase: (token: string, id: string, motivo: string) =>
+    api<{ clase: ClaseDetalle; resumen: ResumenDeCancelar }>(`/clases/${id}/cancelar/`, {
+      method: 'POST',
+      token,
+      body: { motivo },
     }),
   avisarAClase: (token: string, id: string, texto: string) =>
     api<{ personas: number }>(`/clases/${id}/avisar/`, { method: 'POST', token, body: { texto } }),

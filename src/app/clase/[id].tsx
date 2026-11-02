@@ -5,6 +5,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from
 
 import { Apuntar, Quitar } from '@/components/apuntar';
 import { AvisarAClase } from '@/components/avisar';
+import { CancelarClase } from '@/components/cancelar-clase';
 import { Insignia, Plazas } from '@/components/clase-ui';
 import { Avatar, Boton, Card, Chip } from '@/components/ui';
 import { ApiError, endpoints, type Apuntado, type ClaseDetalle } from '@/lib/api';
@@ -36,6 +37,7 @@ export default function ClaseScreen() {
 
   const [apuntando, setApuntando] = useState(false);
   const [avisando, setAvisando] = useState(false);
+  const [cancelandoClase, setCancelandoClase] = useState(false);
   const [quitando, setQuitando] = useState<Apuntado | null>(null);
   const [guardando, setGuardando] = useState(false);
   const [fallo, setFallo] = useState('');
@@ -116,6 +118,17 @@ export default function ClaseScreen() {
                     onPress={() => setAvisando(true)}
                   />
                 ) : null}
+                {/* Cancelar va la última y en gris: es lo más grave que se hace
+                    aquí, y no se llega a ella de un pulgar despistado. Una clase
+                    que ya empezó no se cancela: eso ya pasó. */}
+                {clase.puede_cancelar && !clase.empezada ? (
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={() => setCancelandoClase(true)}
+                    style={({ pressed }) => [styles.cancelar, pressed && { opacity: 0.6 }]}>
+                    <Text style={styles.cancelarTexto}>Cancelar la clase</Text>
+                  </Pressable>
+                ) : null}
               </View>
             )}
 
@@ -174,6 +187,12 @@ export default function ClaseScreen() {
             onApuntado={(actualizada) => { setRecien(actualizada); recargar(); }}
           />
           <AvisarAClase visible={avisando} clase={clase} onClose={() => setAvisando(false)} />
+          <CancelarClase
+            visible={cancelandoClase}
+            clase={clase}
+            onClose={() => setCancelandoClase(false)}
+            onCancelada={(actualizada) => { setRecien(actualizada); recargar(); }}
+          />
           <Quitar
             visible={quitando !== null}
             nombre={quitando?.nombre ?? ''}
@@ -267,6 +286,8 @@ const styles = StyleSheet.create({
   chips: { marginTop: space.sm },
   medidor: { alignSelf: 'stretch', marginTop: space.md, paddingHorizontal: space.xl },
   acciones: { gap: space.sm },
+  cancelar: { alignSelf: 'center', paddingVertical: space.md, paddingHorizontal: space.lg },
+  cancelarTexto: { fontSize: 14, fontWeight: '700', color: colors.muted },
   aviso: { backgroundColor: colors.dangerSoft, borderColor: colors.dangerSoft },
   avisoTexto: { fontSize: 14, color: colors.danger, fontWeight: '600', lineHeight: 20 },
   bloque: { gap: space.sm },
