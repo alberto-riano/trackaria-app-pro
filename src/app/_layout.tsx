@@ -69,6 +69,7 @@ function RootNavigator() {
             y con un enlace directo se abría sin sesión y se quedaba girando. */}
         <Stack.Screen name="clase/[id]" options={{ title: 'Clase' }} />
         <Stack.Screen name="alumno/[id]" options={{ title: 'Alumno' }} />
+        <Stack.Screen name="instructor/[id]" options={{ title: 'Instructor' }} />
         <Stack.Screen
           name="chat/[id]"
           options={{

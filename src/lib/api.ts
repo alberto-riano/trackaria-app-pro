@@ -247,6 +247,27 @@ export type Alumno = {
 /** Una clase de las que da el centro, para atarle un bono. */
 export type TipoDeClase = { id: string; nombre: string; color: string };
 
+/** A quién puede ir un aviso: a todos o a los alumnos de una clase. */
+export type ParaQuien = { clave: string; nombre: string; color: string };
+
+export type AvisoEnviado = {
+  id: string;
+  titulo: string;
+  texto: string;
+  para: string;
+  personas: number;
+  cuando: string;
+};
+
+export type Instructor = {
+  id: string;
+  nombre: string;
+  color: string;
+  telefono: string;
+  semana: { dia: string; clases: { id: string; nombre: string; color: string; hora: string; sala: string }[] }[];
+  hoy: Clase[];
+};
+
 export type CargaDeClases = { fecha: string; clases: number; completas: number };
 
 export type HorarioDia = { dia: string; tramos: string[] };
@@ -330,6 +351,25 @@ export const endpoints = {
       body: { clases, nombre, ...(clase ? { clase } : {}) },
     }),
   tiposDeClase: (token: string) => api<{ tipos: TipoDeClase[] }>('/clases/tipos/', { token }),
+  instructor: (token: string, id: string) =>
+    api<{ instructor: Instructor }>(`/instructores/${id}/`, { token }),
+  avisos: (token: string) =>
+    api<{ opciones: ParaQuien[]; avisos: AvisoEnviado[] }>('/avisos/', { token }),
+  // Cuántos lo recibirían, para poder decirlo antes de enviarlo: «son 18, pero
+  // solo 12 tienen la app».
+  destinatarios: (token: string, para: string) =>
+    api<{ etiqueta: string; personas: number; con_app: number }>(
+      `/avisos/?para=${encodeURIComponent(para)}`,
+      { token },
+    ),
+  enviarAviso: (token: string, para: string, titulo: string, texto: string) =>
+    api<{ personas: number; avisos: AvisoEnviado[] }>('/avisos/', {
+      method: 'POST',
+      token,
+      body: { para, titulo, texto },
+    }),
+  avisarAClase: (token: string, id: string, texto: string) =>
+    api<{ personas: number }>(`/clases/${id}/avisar/`, { method: 'POST', token, body: { texto } }),
   // `ya_estaba` no es un error: ese teléfono ya tenía ficha y es a ella a donde
   // quería llegar quien está preguntando.
   crearAlumno: (token: string, nombre: string, telefono: string) =>

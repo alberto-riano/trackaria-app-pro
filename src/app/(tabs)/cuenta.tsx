@@ -1,4 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { router } from 'expo-router';
 import { useCallback } from 'react';
 import {
   ActivityIndicator, Linking, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View,
@@ -84,19 +85,25 @@ export default function CuentaScreen() {
                 <Text style={styles.vacio}>Todavía no hay instructores dados de alta.</Text>
               ) : (
                 instructores.map((instructor) => (
-                  <View key={instructor.id} style={styles.profesional}>
+                  <Pressable
+                    key={instructor.id}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Ver la ficha de ${instructor.nombre}`}
+                    onPress={() => router.push(`/instructor/${instructor.id}`)}
+                    style={({ pressed }) => [styles.profesional, pressed && { opacity: 0.7 }]}>
                     <View style={[styles.punto, { backgroundColor: instructor.color || colors.brand }]} />
                     <View style={styles.profesionalTexto}>
                       <Text style={styles.profesionalNombre}>{instructor.nombre}</Text>
-                      {/* Qué da, no su semana: a qué hora es cada clase ya está
-                          en la pestaña de Clases, con el día puesto. */}
+                      {/* Qué da, no su semana: la semana entera está dentro, y
+                          aquí lo que se busca es a quién tocar. */}
                       <Text style={styles.imparte}>
                         {instructor.clases.length > 0
                           ? instructor.clases.join('  ·  ')
                           : 'Sin clases asignadas.'}
                       </Text>
                     </View>
-                  </View>
+                    <Ionicons name="chevron-forward" size={18} color={colors.faint} />
+                  </Pressable>
                 ))
               )}
             </Bloque>

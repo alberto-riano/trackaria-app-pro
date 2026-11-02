@@ -4,6 +4,7 @@ import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Apuntar, Quitar } from '@/components/apuntar';
+import { AvisarAClase } from '@/components/avisar';
 import { Insignia, Plazas } from '@/components/clase-ui';
 import { Avatar, Boton, Card, Chip } from '@/components/ui';
 import { ApiError, endpoints, type Apuntado, type ClaseDetalle } from '@/lib/api';
@@ -34,6 +35,7 @@ export default function ClaseScreen() {
   const clase = recien ?? datos?.clase ?? null;
 
   const [apuntando, setApuntando] = useState(false);
+  const [avisando, setAvisando] = useState(false);
   const [quitando, setQuitando] = useState<Apuntado | null>(null);
   const [guardando, setGuardando] = useState(false);
   const [fallo, setFallo] = useState('');
@@ -99,11 +101,22 @@ export default function ClaseScreen() {
                 </Text>
               </Card>
             ) : (
-              <Boton
-                titulo={clase.libres > 0 ? 'Apuntar a alguien' : 'Apuntar de todas formas'}
-                variante={clase.libres > 0 ? 'principal' : 'secundario'}
-                onPress={() => setApuntando(true)}
-              />
+              <View style={styles.acciones}>
+                <Boton
+                  titulo={clase.libres > 0 ? 'Apuntar a alguien' : 'Apuntar de todas formas'}
+                  variante={clase.libres > 0 ? 'principal' : 'secundario'}
+                  onPress={() => setApuntando(true)}
+                />
+                {/* Solo si hay alguien a quien avisar: un botón que siempre
+                    contesta «no hay nadie apuntado» no es un botón. */}
+                {clase.apuntados.length > 0 && !clase.empezada ? (
+                  <Boton
+                    titulo="Avisar a los que vienen"
+                    variante="suave"
+                    onPress={() => setAvisando(true)}
+                  />
+                ) : null}
+              </View>
             )}
 
             <Bloque
@@ -160,6 +173,7 @@ export default function ClaseScreen() {
             onClose={() => setApuntando(false)}
             onApuntado={(actualizada) => { setRecien(actualizada); recargar(); }}
           />
+          <AvisarAClase visible={avisando} clase={clase} onClose={() => setAvisando(false)} />
           <Quitar
             visible={quitando !== null}
             nombre={quitando?.nombre ?? ''}
@@ -252,6 +266,7 @@ const styles = StyleSheet.create({
   detalle: { fontSize: 14, color: colors.faint },
   chips: { marginTop: space.sm },
   medidor: { alignSelf: 'stretch', marginTop: space.md, paddingHorizontal: space.xl },
+  acciones: { gap: space.sm },
   aviso: { backgroundColor: colors.dangerSoft, borderColor: colors.dangerSoft },
   avisoTexto: { fontSize: 14, color: colors.danger, fontWeight: '600', lineHeight: 20 },
   bloque: { gap: space.sm },

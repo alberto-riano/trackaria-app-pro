@@ -115,7 +115,7 @@ export default function AlumnoScreen() {
               </Bloque>
             ) : null}
 
-            <Bloque titulo="A qué viene">
+            <Bloque titulo="Próximas clases">
               {alumno.proximas.length === 0 ? (
                 <Text style={styles.vacio}>No está apuntado a nada por ahora.</Text>
               ) : (
@@ -124,7 +124,7 @@ export default function AlumnoScreen() {
             </Bloque>
 
             {alumno.ultimas && alumno.ultimas.length > 0 ? (
-              <Bloque titulo="A qué vino">
+              <Bloque titulo="Historial">
                 {alumno.ultimas.map((clase) => <FilaDeClase key={clase.id} clase={clase} pasada />)}
               </Bloque>
             ) : null}
