@@ -290,12 +290,21 @@ export type AvisoEnviado = {
   cuando: string;
 };
 
+export type HorarioSuyo = {
+  id: string;
+  nombre: string;
+  color: string;
+  imagen?: string;
+  hora: string;
+  sala: string;
+};
+
 export type Instructor = {
   id: string;
   nombre: string;
   color: string;
   telefono: string;
-  semana: { dia: string; clases: { id: string; nombre: string; color: string; hora: string; sala: string }[] }[];
+  semana: { dia: string; clases: HorarioSuyo[] }[];
   hoy: Clase[];
 };
 
