@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useCallback, useEffect, useState } from 'react';
 import {
-  ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View,
+  ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View,
 } from 'react-native';
 
 import { Avatar, Boton } from '@/components/ui';
@@ -177,7 +177,13 @@ export function AltaDeAlumno({
   }
 
   return (
-    <>
+    // En un ScrollView para poder arrastrar y quitar el teclado: tocar fuera
+    // cierra la hoja entera, así que sin esto no hay forma de bajarlo.
+    <ScrollView
+      style={styles.cuerpo}
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="on-drag"
+      showsVerticalScrollIndicator={false}>
       <Pressable
         accessibilityRole="button"
         onPress={onVolver}
@@ -237,7 +243,7 @@ export function AltaDeAlumno({
           onPress={crear}
         />
       </View>
-    </>
+    </ScrollView>
   );
 }
 
@@ -246,6 +252,7 @@ function Etiqueta({ texto }: { texto: string }) {
 }
 
 const styles = StyleSheet.create({
+  cuerpo: { flexShrink: 1 },
   titulo: { fontSize: 20, fontWeight: '800', color: colors.text, letterSpacing: -0.3 },
   coletilla: { fontSize: 14, color: colors.muted, marginTop: 2, lineHeight: 20 },
   buscador: {
@@ -277,7 +284,7 @@ const styles = StyleSheet.create({
     fontSize: 16, color: colors.text,
   },
   ayuda: { fontSize: 13, color: colors.faint, marginTop: space.xs, lineHeight: 18 },
-  acciones: { gap: space.sm, marginTop: space.lg },
+  acciones: { gap: space.sm, marginTop: space.lg, marginBottom: space.sm },
   error: {
     flexDirection: 'row', alignItems: 'center', gap: space.sm,
     backgroundColor: colors.dangerSoft, borderRadius: radius.md, padding: space.md, marginTop: space.md,

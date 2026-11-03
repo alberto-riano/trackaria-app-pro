@@ -266,7 +266,20 @@ export type Alumno = {
 export type TipoDeClase = { id: string; nombre: string; color: string };
 
 /** A quién puede ir un aviso: a todos o a los alumnos de una clase. */
-export type ParaQuien = { clave: string; nombre: string; color: string; personas: number };
+export type ParaQuien = {
+  clave: string;
+  nombre: string;
+  /** Debajo del nombre: «Todos sus horarios», el instructor… */
+  detalle: string;
+  color: string;
+  imagen: string;
+  /** Cuántos horarios tiene. Con uno solo no hay nada que afinar. */
+  horarios: number;
+  personas: number;
+};
+
+/** Un horario suelto de una clase: «lun y mié · 19:00». */
+export type HorarioDeAviso = { clave: string; nombre: string; detalle: string; personas: number };
 
 export type AvisoEnviado = {
   id: string;
@@ -375,6 +388,11 @@ export const endpoints = {
     api<{ opciones: ParaQuien[]; avisos: AvisoEnviado[] }>('/avisos/', { token }),
   // Cuántos lo recibirían, para poder decirlo antes de enviarlo: «son 18, pero
   // solo 12 tienen la app».
+  horariosDeAviso: (token: string, clase: string) =>
+    api<{
+      clase: { id: string; nombre: string; color: string; imagen: string };
+      horarios: HorarioDeAviso[];
+    }>(`/avisos/horarios/?clase=${clase}`, { token }),
   destinatarios: (token: string, para: string) =>
     api<{ etiqueta: string; personas: number; con_app: number }>(
       `/avisos/?para=${encodeURIComponent(para)}`,

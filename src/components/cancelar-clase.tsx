@@ -71,7 +71,11 @@ export function CancelarClase({
       {resumen ? (
         <Hecho resumen={resumen} onClose={onClose} />
       ) : (
-        <>
+        <ScrollView
+          style={styles.cuerpo}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          showsVerticalScrollIndicator={false}>
           <Text style={styles.titulo}>Cancelar la clase</Text>
           <Text style={styles.coletilla}>
             {clase.nombre} · {clase.hora}
@@ -119,7 +123,7 @@ export function CancelarClase({
           </View>
 
           {cancelando ? <ActivityIndicator color={colors.brand} style={styles.cargando} /> : null}
-        </>
+        </ScrollView>
       )}
     </BottomSheet>
   );
@@ -210,6 +214,7 @@ function Hecho({ resumen, onClose }: { resumen: ResumenDeCancelar; onClose: () =
 }
 
 const styles = StyleSheet.create({
+  cuerpo: { flexShrink: 1 },
   titulo: { fontSize: 20, fontWeight: '800', color: colors.text, letterSpacing: -0.3 },
   coletilla: { fontSize: 14, color: colors.muted, marginTop: 2, lineHeight: 20 },
   coletillaCentrada: { textAlign: 'center' },
@@ -229,7 +234,7 @@ const styles = StyleSheet.create({
     padding: space.md, marginTop: space.lg,
   },
   avisoTexto: { flex: 1, fontSize: 14, color: colors.brandDark, fontWeight: '600', lineHeight: 20 },
-  acciones: { gap: space.sm, marginTop: space.lg },
+  acciones: { gap: space.sm, marginTop: space.lg, marginBottom: space.sm },
   rojo: {
     minHeight: 48, borderRadius: radius.md, backgroundColor: colors.danger,
     alignItems: 'center', justifyContent: 'center', paddingHorizontal: space.lg,

@@ -91,6 +91,11 @@ export function DarBono({
 
   return (
     <BottomSheet visible={visible} onClose={onClose} cerrarLabel="Cerrar">
+    <ScrollView
+      style={styles.cuerpo}
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="on-drag"
+      showsVerticalScrollIndicator={false}>
       <Text style={styles.titulo}>Darle un bono</Text>
       <Text style={styles.coletilla}>{alumno.nombre}</Text>
 
@@ -186,11 +191,13 @@ export function DarBono({
           onPress={dar}
         />
       </View>
+    </ScrollView>
     </BottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
+  cuerpo: { flexShrink: 1 },
   titulo: { fontSize: 20, fontWeight: '800', color: colors.text, letterSpacing: -0.3 },
   coletilla: { fontSize: 14, color: colors.muted, marginTop: 2 },
   etiqueta: {
@@ -231,7 +238,7 @@ const styles = StyleSheet.create({
     padding: space.md, marginTop: space.lg,
   },
   resumenTexto: { flex: 1, fontSize: 14, color: colors.brandDark, fontWeight: '600', lineHeight: 20 },
-  acciones: { gap: space.sm, marginTop: space.lg },
+  acciones: { gap: space.sm, marginTop: space.lg, marginBottom: space.sm },
   error: {
     flexDirection: 'row', alignItems: 'center', gap: space.sm,
     backgroundColor: colors.dangerSoft, borderRadius: radius.md, padding: space.md, marginTop: space.md,
