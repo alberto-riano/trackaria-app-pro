@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Avatar, Boton, Card, Chip, EmptyState, Encabezado } from '@/components/ui';
 import { ApiError, endpoints, type Pendiente } from '@/lib/api';
 import { useDatos } from '@/lib/datos';
-import { comoFecha, dayTitle, minutosDesde, timeAgo } from '@/lib/format';
+import { comoFecha, dayTitle, minutosDesde } from '@/lib/format';
 import { useSession } from '@/lib/session';
 import { colors, radius, space } from '@/lib/theme';
 
@@ -121,15 +121,32 @@ function PendienteScreen() {
   );
 }
 
-/** Cuánto lleva esperando. En rojo a partir de media hora, que es lo que duele. */
+/** Cuánto lleva esperando, dicho entero.
+ *
+ * Antes salía de quitarle el «hace» a la fecha relativa, y eso producía
+ * «esperando ahora mismo» y «esperando ayer», que no se dicen.
+ */
+function cuantoLleva(minutos: number) {
+  if (minutos < 1) return 'acaba de llegar';
+  if (minutos < 60) return `esperando ${minutos} min`;
+  const horas = Math.floor(minutos / 60);
+  if (horas < 24) return `esperando ${horas} h`;
+  const dias = Math.floor(horas / 24);
+  return dias === 1 ? 'esperando desde ayer' : `esperando ${dias} días`;
+}
+
+/** En rojo a partir de media hora, que es lo que duele. */
 function Espera({ desde }: { desde: string }) {
   if (!desde) return null;
-  const tarde = minutosDesde(desde) >= 30;
+  const minutos = minutosDesde(desde);
+  const tarde = minutos >= 30;
   return (
     <View style={styles.espera}>
       <Ionicons name="time-outline" size={14} color={tarde ? colors.danger : colors.faint} />
-      <Text style={[styles.esperaTexto, tarde && { color: colors.danger, fontWeight: '700' }]}>
-        esperando {timeAgo(new Date(desde)).replace('hace ', '')}
+      <Text
+        style={[styles.esperaTexto, tarde && { color: colors.danger, fontWeight: '700' }]}
+        numberOfLines={1}>
+        {cuantoLleva(minutos)}
       </Text>
     </View>
   );
@@ -140,20 +157,30 @@ function TarjetaConversacion({ item }: { item: Extract<Pendiente, { tipo: 'conve
     <Card style={styles.tarjeta}>
       <View style={[styles.franja, { backgroundColor: colors.warning }]} />
       <View style={styles.cuerpo}>
+        {/* Aquí el motivo va debajo del nombre y no al lado, al revés que en una
+            cita: «Sin confirmar» son dos palabras y «Pide hablar con una
+            persona» son cinco, y en la misma línea se comía el nombre. */}
         <View style={styles.cabecera}>
           <Avatar nombre={item.persona} tono="alerta" />
           <View style={styles.cabeceraTexto}>
-            <Text style={styles.persona}>{item.persona}</Text>
+            <Text style={styles.persona} numberOfLines={1}>{item.persona}</Text>
             <Chip label={item.motivo_texto} tone="warning" />
           </View>
         </View>
 
         {/* Lo que dijo, literal. Es lo único que te deja decidir si corre prisa. */}
-        {item.mensaje ? <Text style={styles.cita}>«{item.mensaje}»</Text> : null}
+        {item.mensaje ? (
+          <Text style={styles.cita} numberOfLines={2}>«{item.mensaje}»</Text>
+        ) : null}
 
-        <Espera desde={item.desde} />
-
-        <Boton titulo="Entrar en la conversación" onPress={() => router.push(`/chat/${item.id}`)} />
+        <View style={styles.pie}>
+          <Espera desde={item.desde} />
+          <Boton
+            titulo="Entrar"
+            style={styles.botonCompacto}
+            onPress={() => router.push(`/chat/${item.id}`)}
+          />
+        </View>
       </View>
     </Card>
   );
@@ -173,24 +200,29 @@ function TarjetaCita({
       <View style={styles.cuerpo}>
         <View style={styles.cabecera}>
           <Avatar nombre={item.persona} />
-          <View style={styles.cabeceraTexto}>
-            <Text style={styles.persona}>{item.persona}</Text>
-            <Chip label="Sin confirmar" tone="brand" />
-          </View>
+          <Text style={styles.persona} numberOfLines={1}>{item.persona}</Text>
+          <Chip label="Sin confirmar" tone="brand" />
         </View>
 
-        <View style={styles.hueco}>
-          <Text style={styles.cuando}>
+        {/* Sin recuadro gris alrededor: la fecha ya destaca por tamaño, y la caja
+            solo añadía altura a una tarjeta de la que caben tres en pantalla. */}
+        <View style={styles.cuando}>
+          <Text style={styles.cuandoFecha}>
             {dayTitle(comoFecha(cita.fecha))} · {cita.hora}
           </Text>
-          <Text style={styles.detalle}>
+          <Text style={styles.detalle} numberOfLines={1}>
             {[cita.tratamiento, cita.profesional].filter(Boolean).join(' · ')}
           </Text>
         </View>
 
-        <Espera desde={item.desde} />
-
-        <Boton titulo={ocupado ? 'Confirmando…' : 'Confirmar la cita'} onPress={onConfirmar} />
+        <View style={styles.pie}>
+          <Espera desde={item.desde} />
+          <Boton
+            titulo={ocupado ? 'Confirmando…' : 'Confirmar'}
+            style={styles.botonCompacto}
+            onPress={onConfirmar}
+          />
+        </View>
       </View>
     </Card>
   );
@@ -201,17 +233,22 @@ const styles = StyleSheet.create({
   cargando: { marginTop: space.xxl },
   resumen: { fontSize: 15, color: colors.muted, fontWeight: '600', marginTop: -space.sm },
   lista: { gap: space.md },
-  tarjeta: { flexDirection: 'row', gap: space.lg, padding: 0, overflow: 'hidden' },
-  franja: { width: 5 },
-  cuerpo: { flex: 1, gap: space.md, padding: space.lg, paddingLeft: 0 },
-  cabecera: { flexDirection: 'row', gap: space.md, alignItems: 'center' },
-  cabeceraTexto: { flex: 1, gap: 5 },
-  persona: { fontSize: 17, fontWeight: '800', color: colors.text },
-  cita: { fontSize: 15, color: colors.text, lineHeight: 22, fontStyle: 'italic' },
-  hueco: { backgroundColor: colors.background, borderRadius: radius.md, padding: space.md, gap: 3 },
-  cuando: { fontSize: 17, fontWeight: '800', color: colors.text },
-  detalle: { fontSize: 14, color: colors.muted },
-  espera: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  tarjeta: { flexDirection: 'row', gap: space.md, padding: 0, overflow: 'hidden' },
+  franja: { width: 4 },
+  cuerpo: { flex: 1, gap: space.sm, padding: space.md, paddingLeft: 0 },
+  // El nombre y la etiqueta, en la misma línea. Antes la etiqueta iba debajo
+  // del nombre y cada tarjeta se llevaba una línea entera para dos palabras.
+  cabecera: { flexDirection: 'row', gap: space.sm, alignItems: 'center' },
+  cabeceraTexto: { flex: 1, alignItems: 'flex-start', gap: 4 },
+  persona: { flex: 1, fontSize: 16, fontWeight: '800', color: colors.text },
+  cita: { fontSize: 14, color: colors.text, lineHeight: 20, fontStyle: 'italic' },
+  cuando: { gap: 1 },
+  cuandoFecha: { fontSize: 16, fontWeight: '800', color: colors.text },
+  detalle: { fontSize: 13, color: colors.muted },
+  // La espera y el botón comparten línea: son la pregunta y la respuesta.
+  pie: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
+  botonCompacto: { minHeight: 38, paddingHorizontal: space.lg },
+  espera: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 5 },
   esperaTexto: { fontSize: 13, color: colors.faint },
   error: {
     flexDirection: 'row', alignItems: 'center', gap: space.sm,

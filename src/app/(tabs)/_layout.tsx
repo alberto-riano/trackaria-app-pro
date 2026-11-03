@@ -44,9 +44,19 @@ import { colors } from '@/lib/theme';
  * y lo único que no puede esperar al panel.
  */
 export default function TabsLayout() {
-  // El número va en la pestaña para no tener que entrar a mirar si hay algo.
-  const { datos } = useDatos(useCallback((token: string) => endpoints.me(token), []));
+  // Los números van en las pestañas para no tener que entrar a mirar si hay algo.
+  // Se repasa cada medio minuto: un globito que solo se actualiza al cambiar
+  // de pestaña dice que no hay nada nuevo cuando sí lo hay, y el globito es
+  // justo lo que se mira sin entrar.
+  const { datos } = useDatos(
+    useCallback((token: string) => endpoints.me(token), []),
+    { cada: 30_000 },
+  );
   const esperando = datos?.hoy.pendientes ?? 0;
+  // Chats sin leer: son conversaciones, no mensajes. Lo que se decide mirando
+  // el globito es «¿tengo que entrar?», y tres mensajes de la misma persona
+  // siguen siendo una sola visita.
+  const sinLeer = datos?.hoy.chats_sin_leer ?? 0;
 
   // Qué pestañas hay se decide con la sesión y no con esa carga: la sesión ya
   // trae el centro comprobado desde el arranque, así que salen bien de
@@ -93,6 +103,7 @@ export default function TabsLayout() {
         options={{
           title: 'Chats',
           href: hayWhatsapp ? undefined : null,
+          tabBarBadge: sinLeer > 0 ? sinLeer : undefined,
           tabBarIcon: ({ color, size, focused }) => (
             <Ionicons name={focused ? 'chatbubbles' : 'chatbubbles-outline'} color={color} size={size} />
           ),

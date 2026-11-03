@@ -69,7 +69,7 @@ export default function InstructorScreen() {
                   accessibilityLabel={`${clase.hora}, ${clase.nombre}`}
                   onPress={() => router.push(`/clase/${clase.id}`)}
                   style={({ pressed }) => [styles.deHoy, pressed && { opacity: 0.7 }]}>
-                  <Text style={styles.deHoyHora}>{clase.hora}</Text>
+                  <Text style={styles.deHoyHora} numberOfLines={1}>{clase.hora}</Text>
                   <Insignia nombre={clase.nombre} color={clase.color} imagen={clase.imagen} tamano={36} />
                   <View style={styles.deHoyTexto}>
                     <Text style={styles.filaTitulo} numberOfLines={1}>{clase.nombre}</Text>
@@ -96,7 +96,7 @@ export default function InstructorScreen() {
                   <Text style={styles.diaNombre}>{dia.dia.toUpperCase()}</Text>
                   {dia.clases.map((clase) => (
                     <View key={clase.id} style={styles.deLaSemana}>
-                      <Text style={styles.semanaHora}>{clase.hora}</Text>
+                      <Text style={styles.semanaHora} numberOfLines={1}>{clase.hora}</Text>
                       <Insignia
                         nombre={clase.nombre}
                         color={clase.color}
@@ -182,7 +182,9 @@ const styles = StyleSheet.create({
   bloqueCard: { paddingVertical: space.sm },
   vacio: { fontSize: 14, color: colors.muted, lineHeight: 21, paddingVertical: space.sm },
   deHoy: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: space.sm },
-  deHoyHora: { width: 48, fontSize: 15, fontWeight: '800', color: colors.text },
+  // Ancho mínimo y no fijo: con el tamaño de letra grande del sistema, «12:00»
+  // no cabía en 48 puntos y se partía en «12:0 / 0».
+  deHoyHora: { minWidth: 48, flexShrink: 0, fontSize: 15, fontWeight: '800', color: colors.text },
   deHoyTexto: { flex: 1, gap: 3 },
   filaTitulo: { fontSize: 16, fontWeight: '700', color: colors.text },
   chips: { flexDirection: 'row' },
@@ -195,7 +197,7 @@ const styles = StyleSheet.create({
   deLaSemana: {
     flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: space.xs,
   },
-  semanaHora: { width: 48, fontSize: 15, fontWeight: '800', color: colors.text },
+  semanaHora: { minWidth: 48, flexShrink: 0, fontSize: 15, fontWeight: '800', color: colors.text },
   semanaTexto: { flex: 1, minWidth: 0, gap: 2 },
   semanaNombre: { fontSize: 15, fontWeight: '600', color: colors.text, lineHeight: 20 },
   semanaSala: { fontSize: 13, color: colors.muted },

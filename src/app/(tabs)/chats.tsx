@@ -31,6 +31,7 @@ export default function ChatsScreen() {
   const { usuario } = useSession();
   const [texto, setTexto] = useState('');
   const [busca, setBusca] = useState('');
+  const [quien, setQuien] = useState<Quien>('todos');
 
   // Se espera a que pare de escribir: una consulta por letra sería pedirle al
   // servidor que busque «m», «mu», «mut»… para tirar las tres primeras.
@@ -46,7 +47,14 @@ export default function ChatsScreen() {
     { cada: busca ? undefined : 15_000 },
   );
 
-  const chats = datos?.chats ?? null;
+  const todos = datos?.chats ?? null;
+  const cuantos = {
+    bot: (todos ?? []).filter((item) => item.bot).length,
+    centro: (todos ?? []).filter((item) => !item.bot).length,
+  };
+  const chats = todos === null || quien === 'todos'
+    ? todos
+    : todos.filter((item) => (quien === 'bot' ? item.bot : !item.bot));
 
   return (
     <ScrollView
@@ -70,7 +78,9 @@ export default function ChatsScreen() {
         />
       </View>
 
-      {!busca && chats && chats.length > 0 ? <Leyenda /> : null}
+      {!busca && todos && todos.length > 0 ? (
+        <Filtros quien={quien} onCambiar={setQuien} cuantos={cuantos} />
+      ) : null}
 
       {error ? (
         <View style={styles.error} accessibilityRole="alert">
@@ -83,11 +93,16 @@ export default function ChatsScreen() {
         <ActivityIndicator color={colors.brand} style={styles.cargando} />
       ) : chats.length === 0 ? (
         <EmptyState
-          title={busca ? 'Nada con eso' : 'Todavía no hay conversaciones'}
+          title={
+            busca ? 'Nada con eso'
+              : quien !== 'todos' ? 'Ninguna por aquí'
+                : 'Todavía no hay conversaciones'
+          }
           text={
-            busca
-              ? 'Se busca por el nombre, el teléfono y lo que se dijo en el chat.'
-              : 'Aquí aparecerán los chats del WhatsApp de tu centro en cuanto alguien escriba.'
+            busca ? 'Se busca por el nombre, el teléfono y lo que se dijo en el chat.'
+              : quien === 'bot' ? 'Ahora mismo no hay ninguna conversación en manos del bot.'
+                : quien === 'centro' ? 'No has cogido ninguna conversación. Toca el filtro otra vez para verlas todas.'
+                  : 'Aquí aparecerán los chats del WhatsApp de tu centro en cuanto alguien escriba.'
           }
         />
       ) : (
@@ -101,18 +116,56 @@ export default function ChatsScreen() {
   );
 }
 
-/** Qué significa cada icono. Una vez, no en cada fila. */
-function Leyenda() {
+type Quien = 'todos' | 'bot' | 'centro';
+
+/**
+ * Qué significa cada icono y, de paso, el filtro.
+ *
+ * Esto era solo una leyenda y lo parecía a medias: dos iconos con su texto
+ * debajo del buscador se leen como botones, se tocan y no pasa nada. Ahora
+ * hacen lo que ya prometían, que además es la pregunta de verdad —«enséñame
+ * solo las que llevo yo»—, y siguen explicando qué es cada icono.
+ *
+ * Filtra sobre lo que ya está cargado y no pide nada al servidor: son las
+ * últimas cincuenta conversaciones y la respuesta tiene que ser instantánea.
+ */
+function Filtros({
+  quien, onCambiar, cuantos,
+}: {
+  quien: Quien;
+  onCambiar: (quien: Quien) => void;
+  cuantos: { bot: number; centro: number };
+}) {
   return (
     <View style={styles.leyenda}>
-      <View style={styles.leyendaItem}>
-        <Insignia bot />
-        <Text style={styles.leyendaTexto}>Lo lleva el bot</Text>
-      </View>
-      <View style={styles.leyendaItem}>
-        <Insignia bot={false} />
-        <Text style={styles.leyendaTexto}>Lo lleva el centro</Text>
-      </View>
+      {(['bot', 'centro'] as const).map((cual) => {
+        const activo = quien === cual;
+        return (
+          <Pressable
+            key={cual}
+            accessibilityRole="button"
+            accessibilityState={{ selected: activo }}
+            accessibilityLabel={
+              activo
+                ? `Quitar el filtro: ${cual === 'bot' ? 'lo lleva el bot' : 'lo lleva el centro'}`
+                : `Ver solo las que ${cual === 'bot' ? 'lleva el bot' : 'lleva el centro'}`
+            }
+            // Volver a tocar el que ya está puesto lo quita: no hace falta un
+            // tercer botón de «todas» que casi siempre sobra.
+            onPress={() => onCambiar(activo ? 'todos' : cual)}
+            style={({ pressed }) => [
+              styles.leyendaItem, activo && styles.leyendaItemActivo, pressed && { opacity: 0.7 },
+            ]}>
+            <Insignia bot={cual === 'bot'} />
+            <Text style={[styles.leyendaTexto, activo && styles.leyendaTextoActivo]}>
+              {cual === 'bot' ? 'Lo lleva el bot' : 'Lo lleva el centro'}
+            </Text>
+            <Text style={[styles.leyendaCuenta, activo && styles.leyendaTextoActivo]}>
+              {cuantos[cual]}
+            </Text>
+          </Pressable>
+        );
+      })}
     </View>
   );
 }
@@ -172,9 +225,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.md, marginBottom: space.md,
   },
   campo: { flex: 1, minHeight: 42, fontSize: 15, color: colors.text },
-  leyenda: { flexDirection: 'row', gap: space.lg, marginBottom: space.md, paddingHorizontal: space.xs },
-  leyendaItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  leyendaTexto: { fontSize: 12, color: colors.muted, fontWeight: '600' },
+  leyenda: { flexDirection: 'row', gap: space.sm, marginBottom: space.md },
+  leyendaItem: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: colors.surface, borderRadius: radius.md,
+    borderWidth: 1, borderColor: colors.border,
+    paddingVertical: 7, paddingHorizontal: space.sm,
+  },
+  leyendaItemActivo: { borderColor: colors.brand, backgroundColor: colors.brandSoft },
+  leyendaTexto: { flex: 1, fontSize: 12, color: colors.muted, fontWeight: '600' },
+  leyendaTextoActivo: { color: colors.brandDark },
+  leyendaCuenta: { fontSize: 12, fontWeight: '800', color: colors.faint },
   marca: { width: 20, height: 20, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   lista: { gap: space.sm },
   fila: {

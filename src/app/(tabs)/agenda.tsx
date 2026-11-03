@@ -235,7 +235,9 @@ const styles = StyleSheet.create({
   lista: { gap: space.sm },
   fila: { flexDirection: 'row', gap: space.md, alignItems: 'stretch' },
   filaPasada: { opacity: 0.55 },
-  columnaHora: { width: 58, paddingTop: space.md, alignItems: 'flex-end' },
+  // Mínimo y no fijo: con la letra grande del sistema una hora se partía
+  // en dos líneas dentro de una columna de ancho cerrado.
+  columnaHora: { minWidth: 58, flexShrink: 0, paddingTop: space.md, alignItems: 'flex-end' },
   hora: { fontSize: 15, fontWeight: '800', color: colors.text },
   duracion: { fontSize: 11, color: colors.faint },
   textoPasado: { color: colors.muted },

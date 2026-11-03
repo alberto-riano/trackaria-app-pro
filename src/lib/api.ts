@@ -79,6 +79,8 @@ export type Resumen = {
   citas: number;
   quedan: number;
   pendientes: number;
+  /** Conversaciones con algo sin leer. Puede faltar si el servidor es anterior. */
+  chats_sin_leer?: number;
 };
 
 export type Cita = {
