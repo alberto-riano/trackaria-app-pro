@@ -102,6 +102,19 @@ pide ningún permiso para ello. Conviene decirlo tal cual si Play pregunta.
 Las capturas van a 1080 × 1920 y no al tamaño del iPhone porque Play no admite
 proporciones más alargadas que 9:16.
 
+El icono de 512 ya está hecho: `assets/store/play-icon-512.png`. Sale de
+`scripts/iconos.py`, que genera también los del propio proyecto a partir de las
+máscaras de `assets/marca/`. Si alguna vez cambia el color de la marca, se
+cambia ahí y se vuelve a ejecutar: así no se queda ninguno con el color viejo.
+
+**La identidad de Pro es la contraria que la de la app de clientes**: crema con
+la marca en tinta y el acento en oro, frente a tinta con la marca en blanco y el
+acento en turquesa. La oscura es la del cliente, la clara es la de trabajo. Eso
+es lo que las separa a 48 píxeles en el escritorio de un móvil, que es el único
+tamaño al que se decide. No lleva chapa de «PRO»: tres letras en un rectángulo
+de ocho píxeles no se leen.
+
+
 Orden propuesto (las tres primeras son las que decide la gente):
 
 1. Pendiente con dos cosas por hacer — «Lo que está pendiente, de un vistazo»

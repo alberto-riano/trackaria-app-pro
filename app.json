@@ -21,7 +21,7 @@
       "package": "com.trackaria.pro",
       "predictiveBackGestureEnabled": false,
       "adaptiveIcon": {
-        "backgroundColor": "#08766c",
+        "backgroundColor": "#f4efe3",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       }
@@ -31,7 +31,7 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#08766c",
+          "backgroundColor": "#f6f8f7",
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 140
         }
