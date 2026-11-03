@@ -6,7 +6,7 @@ import {
 
 import { BottomSheet } from '@/components/overlay';
 import { Boton } from '@/components/ui';
-import { ApiError, endpoints, type ClaseDetalle, type ParaQuien } from '@/lib/api';
+import { ApiError, endpoints, type AvisoEnviado, type ClaseDetalle, type ParaQuien } from '@/lib/api';
 import { useSession } from '@/lib/session';
 import { colors, radius, space } from '@/lib/theme';
 
@@ -24,7 +24,9 @@ import { colors, radius, space } from '@/lib/theme';
 export function Avisar({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const { token } = useSession();
   const [opciones, setOpciones] = useState<ParaQuien[] | null>(null);
+  const [ultimo, setUltimo] = useState<AvisoEnviado | null>(null);
   const [para, setPara] = useState('all');
+  const [eligiendo, setEligiendo] = useState(false);
   const [titulo, setTitulo] = useState('');
   const [texto, setTexto] = useState('');
   const [cuenta, setCuenta] = useState<{ personas: number; con_app: number } | null>(null);
@@ -39,6 +41,7 @@ export function Avisar({ visible, onClose }: { visible: boolean; onClose: () => 
     setTexto('');
     setFallo('');
     setEnviado(0);
+    setEligiendo(false);
   }, [visible]);
 
   useEffect(() => {
@@ -46,7 +49,11 @@ export function Avisar({ visible, onClose }: { visible: boolean; onClose: () => 
     let vigente = true;
     endpoints
       .avisos(token)
-      .then(({ opciones: posibles }) => { if (vigente) setOpciones(posibles); })
+      .then(({ opciones: posibles, avisos }) => {
+        if (!vigente) return;
+        setOpciones(posibles);
+        setUltimo(avisos[0] ?? null);
+      })
       .catch(() => { if (vigente) setOpciones([]); });
     return () => { vigente = false; };
   }, [visible, token, opciones]);
@@ -64,6 +71,7 @@ export function Avisar({ visible, onClose }: { visible: boolean; onClose: () => 
     return () => { vigente = false; };
   }, [visible, token, para]);
 
+  const elegida = (opciones ?? []).find((opcion) => opcion.clave === para) ?? null;
   const listo = titulo.trim().length > 0 && texto.trim().length > 0 && (cuenta?.personas ?? 0) > 0;
 
   async function enviar() {
@@ -82,7 +90,14 @@ export function Avisar({ visible, onClose }: { visible: boolean; onClose: () => 
 
   return (
     <BottomSheet visible={visible} onClose={onClose} cerrarLabel="Cerrar">
-      {enviado > 0 ? (
+      {eligiendo && opciones !== null ? (
+        <AQuien
+          opciones={opciones}
+          elegida={para}
+          onElegir={(clave) => { setPara(clave); setEligiendo(false); }}
+          onVolver={() => setEligiendo(false)}
+        />
+      ) : enviado > 0 ? (
         // Un aviso no se deshace: en vez de cerrar la hoja sin más, se dice a
         // cuántos ha salido y se cierra a mano.
         <View style={styles.hecho}>
@@ -111,34 +126,21 @@ export function Avisar({ visible, onClose }: { visible: boolean; onClose: () => 
           {opciones === null ? (
             <ActivityIndicator color={colors.brand} style={styles.cargando} />
           ) : (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              keyboardShouldPersistTaps="handled"
-              contentContainerStyle={styles.opciones}>
-              {opciones.map((opcion) => {
-                const puesta = para === opcion.clave;
-                return (
-                  <Pressable
-                    key={opcion.clave}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: puesta }}
-                    onPress={() => setPara(opcion.clave)}
-                    style={({ pressed }) => [
-                      styles.opcion, puesta && styles.opcionPuesta, pressed && { opacity: 0.7 },
-                    ]}>
-                    {opcion.color ? (
-                      <View style={[styles.punto, { backgroundColor: opcion.color }]} />
-                    ) : null}
-                    <Text
-                      style={[styles.opcionTexto, puesta && styles.opcionTextoPuesta]}
-                      numberOfLines={1}>
-                      {opcion.nombre}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
+            // Una fila que se abre, no una tira de fichas: con ocho clases la
+            // tira obliga a deslizar a ciegas para ver si está la que buscas.
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Elegir a quién va el aviso"
+              onPress={() => setEligiendo(true)}
+              style={({ pressed }) => [styles.desplegable, pressed && { opacity: 0.7 }]}>
+              {elegida?.color ? (
+                <View style={[styles.punto, { backgroundColor: elegida.color }]} />
+              ) : null}
+              <Text style={styles.desplegableTexto} numberOfLines={1}>
+                {elegida?.nombre ?? 'Todos los alumnos'}
+              </Text>
+              <Ionicons name="chevron-down" size={18} color={colors.muted} />
+            </Pressable>
           )}
 
           <Text style={styles.etiqueta}>TÍTULO</Text>
@@ -168,8 +170,28 @@ export function Avisar({ visible, onClose }: { visible: boolean; onClose: () => 
           />
 
           <View style={styles.cuenta}>
-            <Ionicons name="megaphone-outline" size={18} color={colors.brandDark} />
-            <Text style={styles.cuentaTexto}>{resumen(cuenta)}</Text>
+            <View style={styles.cuentaFila}>
+              <Ionicons name="megaphone-outline" size={18} color={colors.brandDark} />
+              <Text style={styles.cuentaTexto}>{resumen(cuenta)}</Text>
+            </View>
+            {/* Quién no se va a enterar, en su propia línea: es la mitad que
+                decide si además hay que llamar a alguien. */}
+            {cuenta && cuenta.personas > cuenta.con_app ? (
+              <View style={styles.cuentaFila}>
+                <Ionicons name="call-outline" size={16} color={colors.warning} />
+                <Text style={styles.sinApp}>{sinApp(cuenta)}</Text>
+              </View>
+            ) : null}
+            {/* Y el anterior, que es lo que evita mandar dos veces lo mismo o
+                encadenar tres avisos en una tarde. */}
+            {ultimo ? (
+              <View style={styles.cuentaFila}>
+                <Ionicons name="time-outline" size={16} color={colors.muted} />
+                <Text style={styles.anterior} numberOfLines={2}>
+                  El anterior fue {cuando(ultimo.cuando)}: «{ultimo.titulo}»
+                </Text>
+              </View>
+            ) : null}
           </View>
 
           <View style={styles.acciones}>
@@ -185,22 +207,87 @@ export function Avisar({ visible, onClose }: { visible: boolean; onClose: () => 
   );
 }
 
-/** A cuántos llega, contando que el aviso va por la app del alumno. */
+/** A cuántos llega. El número primero, que es lo que se mira. */
 function resumen(cuenta: { personas: number; con_app: number } | null) {
   if (cuenta === null) return 'Contando a cuántos les llega…';
   if (cuenta.personas === 0) return 'No hay nadie a quien avisar aquí.';
+  if (cuenta.con_app === 0) return 'No llegará a nadie: ninguno tiene la app.';
+  return cuenta.con_app === 1 ? 'Llegará a 1 alumno.' : `Llegará a ${cuenta.con_app} alumnos.`;
+}
+
+/** Y a cuántos no, que es lo que convierte el aviso en llamadas. */
+function sinApp(cuenta: { personas: number; con_app: number }) {
   const sin = cuenta.personas - cuenta.con_app;
-  if (cuenta.con_app === 0) {
-    return cuenta.personas === 1
-      ? 'Esa persona no tiene la app, así que no le llegaría.'
-      : `Ninguna de las ${cuenta.personas} tiene la app, así que no les llegaría.`;
-  }
-  if (sin === 0) {
-    return cuenta.personas === 1 ? 'Le llegará a 1 persona.' : `Les llegará a las ${cuenta.personas}.`;
-  }
-  return `Les llegará a ${cuenta.con_app} de ${cuenta.personas}: ${
-    sin === 1 ? 'el otro no tiene' : `los otros ${sin} no tienen`
-  } la app.`;
+  return sin === 1
+    ? 'Otro alumno no tiene la app: a ese hay que llamarle.'
+    : `Otros ${sin} no tienen la app: a esos hay que llamarles.`;
+}
+
+/** «hoy», «ayer» o «hace 5 días»: lo que hace falta para no repetirse. */
+function cuando(iso: string) {
+  const dias = Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000);
+  if (dias <= 0) return 'hoy';
+  if (dias === 1) return 'ayer';
+  if (dias < 30) return `hace ${dias} días`;
+  return 'hace más de un mes';
+}
+
+/** Elegir a quién va: una lista, con cuánta gente hay detrás de cada opción. */
+function AQuien({
+  opciones, elegida, onElegir, onVolver,
+}: {
+  opciones: ParaQuien[];
+  elegida: string;
+  onElegir: (clave: string) => void;
+  onVolver: () => void;
+}) {
+  return (
+    <>
+      <Pressable
+        accessibilityRole="button"
+        onPress={onVolver}
+        style={({ pressed }) => [styles.volver, pressed && { opacity: 0.7 }]}>
+        <Ionicons name="chevron-back" size={18} color={colors.brandDark} />
+        <Text style={styles.volverTexto}>Volver al aviso</Text>
+      </Pressable>
+
+      <Text style={styles.titulo}>A quién va</Text>
+      <Text style={styles.coletilla}>Cuenta quien tiene bono, cuota o ha venido hace poco.</Text>
+
+      <ScrollView style={styles.lista} keyboardShouldPersistTaps="handled">
+        {opciones.map((opcion) => {
+          const puesta = opcion.clave === elegida;
+          return (
+            <Pressable
+              key={opcion.clave}
+              accessibilityRole="button"
+              accessibilityState={{ selected: puesta }}
+              onPress={() => onElegir(opcion.clave)}
+              style={({ pressed }) => [styles.fila, pressed && { opacity: 0.7 }]}>
+              <View
+                style={[
+                  styles.puntoGrande,
+                  { backgroundColor: opcion.color || colors.brand },
+                  !opcion.color && styles.puntoTodos,
+                ]}
+              />
+              <View style={styles.filaTexto}>
+                <Text style={styles.filaNombre} numberOfLines={1}>{opcion.nombre}</Text>
+                <Text style={styles.filaPista}>
+                  {opcion.personas === 0
+                    ? 'Nadie todavía'
+                    : opcion.personas === 1
+                      ? '1 alumno'
+                      : `${opcion.personas} alumnos`}
+                </Text>
+              </View>
+              {puesta ? <Ionicons name="checkmark" size={20} color={colors.brand} /> : null}
+            </Pressable>
+          );
+        })}
+      </ScrollView>
+    </>
+  );
 }
 
 /**
@@ -306,17 +393,22 @@ const styles = StyleSheet.create({
     letterSpacing: 0.4, marginTop: space.lg, marginBottom: space.xs,
   },
   cargando: { alignSelf: 'flex-start', marginTop: space.sm },
-  opciones: { gap: space.sm, paddingVertical: space.xs, paddingRight: space.lg },
-  opcion: {
+  desplegable: {
     flexDirection: 'row', alignItems: 'center', gap: space.sm,
-    paddingHorizontal: space.md, height: 40, borderRadius: radius.pill,
-    backgroundColor: colors.background, borderWidth: 1.5, borderColor: 'transparent',
-    maxWidth: 220,
+    backgroundColor: colors.background, borderRadius: radius.md,
+    paddingHorizontal: space.md, minHeight: 52,
   },
-  opcionPuesta: { backgroundColor: colors.brandSoft, borderColor: colors.brand },
-  opcionTexto: { fontSize: 14, fontWeight: '700', color: colors.muted },
-  opcionTextoPuesta: { color: colors.brandDark },
+  desplegableTexto: { flex: 1, fontSize: 16, fontWeight: '700', color: colors.text },
   punto: { width: 8, height: 8, borderRadius: 4 },
+  puntoGrande: { width: 12, height: 12, borderRadius: 6 },
+  puntoTodos: { backgroundColor: colors.brand },
+  volver: { flexDirection: 'row', alignItems: 'center', gap: 2, marginBottom: space.sm, alignSelf: 'flex-start' },
+  volverTexto: { fontSize: 14, fontWeight: '700', color: colors.brandDark },
+  lista: { marginTop: space.md, flexShrink: 1, maxHeight: 400 },
+  fila: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: space.md },
+  filaTexto: { flex: 1, gap: 2 },
+  filaNombre: { fontSize: 16, fontWeight: '700', color: colors.text },
+  filaPista: { fontSize: 13, color: colors.muted },
   campo: {
     backgroundColor: colors.background, borderRadius: radius.md,
     paddingHorizontal: space.md, paddingVertical: space.md,
@@ -326,11 +418,13 @@ const styles = StyleSheet.create({
   campoSolo: { marginTop: space.lg },
   ayuda: { fontSize: 13, color: colors.faint, marginTop: space.xs, lineHeight: 18 },
   cuenta: {
-    flexDirection: 'row', alignItems: 'center', gap: space.sm,
-    backgroundColor: colors.brandSoft, borderRadius: radius.md,
+    gap: space.sm, backgroundColor: colors.brandSoft, borderRadius: radius.md,
     padding: space.md, marginTop: space.lg,
   },
-  cuentaTexto: { flex: 1, fontSize: 14, color: colors.brandDark, fontWeight: '600', lineHeight: 20 },
+  cuentaFila: { flexDirection: 'row', alignItems: 'flex-start', gap: space.sm },
+  cuentaTexto: { flex: 1, fontSize: 15, color: colors.brandDark, fontWeight: '700', lineHeight: 20 },
+  sinApp: { flex: 1, fontSize: 13, color: colors.warning, fontWeight: '600', lineHeight: 18 },
+  anterior: { flex: 1, fontSize: 13, color: colors.muted, lineHeight: 18 },
   acciones: { gap: space.sm, marginTop: space.lg },
   hecho: { alignItems: 'center', gap: space.xs, paddingVertical: space.lg },
   hechoIcono: {

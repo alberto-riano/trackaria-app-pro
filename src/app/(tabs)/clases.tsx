@@ -4,7 +4,6 @@ import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Avisar } from '@/components/avisar';
 import { Calendario } from '@/components/calendario';
 import { Insignia, Plazas } from '@/components/clase-ui';
 import { TiraSemanas } from '@/components/tira-semanas';
@@ -31,7 +30,6 @@ export default function ClasesScreen() {
   const hoy = enIso(new Date());
   const [dia, setDia] = useState(hoy);
   const [calendario, setCalendario] = useState(false);
-  const [avisando, setAvisando] = useState(false);
 
   const { datos, error, refrescando, refrescar } = useDatos(
     useCallback((token: string) => endpoints.clases(token, dia), [dia]),
@@ -71,24 +69,13 @@ export default function ClasesScreen() {
           coletilla={usuario?.centro.nombre}
           contenido
           accion={
-            <View style={styles.botones}>
-              {/* Avisar se hace cuando te enteras, y eso casi nunca es estando
-                  sentado delante del ordenador del centro. */}
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Avisar a tus alumnos"
-                onPress={() => setAvisando(true)}
-                style={({ pressed }) => [styles.boton, pressed && { opacity: 0.7 }]}>
-                <Ionicons name="megaphone-outline" size={20} color={colors.brandDark} />
-              </Pressable>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Elegir un día"
-                onPress={() => setCalendario(true)}
-                style={({ pressed }) => [styles.boton, pressed && { opacity: 0.7 }]}>
-                <Ionicons name="calendar-outline" size={20} color={colors.brandDark} />
-              </Pressable>
-            </View>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Elegir un día"
+              onPress={() => setCalendario(true)}
+              style={({ pressed }) => [styles.boton, pressed && { opacity: 0.7 }]}>
+              <Ionicons name="calendar-outline" size={20} color={colors.brandDark} />
+            </Pressable>
           }
         />
 
@@ -133,8 +120,6 @@ export default function ClasesScreen() {
           </>
         )}
       </ScrollView>
-
-      <Avisar visible={avisando} onClose={() => setAvisando(false)} />
 
       <Calendario
         visible={calendario}
@@ -189,7 +174,6 @@ const styles = StyleSheet.create({
   cabecera: { paddingHorizontal: space.lg, backgroundColor: colors.background },
   contenido: { padding: space.lg, paddingBottom: space.xxl },
   cargando: { marginTop: space.xxl },
-  botones: { flexDirection: 'row', gap: space.sm },
   boton: {
     width: 40, height: 40, borderRadius: radius.md, backgroundColor: colors.brandSoft,
     alignItems: 'center', justifyContent: 'center', marginTop: space.sm,

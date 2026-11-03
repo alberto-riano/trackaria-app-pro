@@ -214,6 +214,11 @@ export type ClaseDetalle = Clase & {
   devuelve: boolean;
   /** Si esta cuenta puede cancelar la clase. Lo decide el servidor, no el rol. */
   puede_cancelar?: boolean;
+  /** Si toca pasar lista: el día de la clase o después, y sin cancelar. */
+  lista?: boolean;
+  vinieron?: number;
+  /** Cuántos siguen sin marcar. «No se sabe» no es «no vino». */
+  sin_marcar?: number;
 };
 
 export type Bono = {
@@ -261,7 +266,7 @@ export type Alumno = {
 export type TipoDeClase = { id: string; nombre: string; color: string };
 
 /** A quién puede ir un aviso: a todos o a los alumnos de una clase. */
-export type ParaQuien = { clave: string; nombre: string; color: string };
+export type ParaQuien = { clave: string; nombre: string; color: string; personas: number };
 
 export type AvisoEnviado = {
   id: string;
@@ -381,6 +386,12 @@ export const endpoints = {
       token,
       body: { para, titulo, texto },
     }),
+  // Uno suelto, o de una vez los que faltaban por marcar.
+  pasarLista: (
+    token: string,
+    id: string,
+    que: { reserva: string; vino: boolean } | { vinieron_todos: true },
+  ) => api<{ clase: ClaseDetalle }>(`/clases/${id}/lista/`, { method: 'POST', token, body: que }),
   cancelarClase: (token: string, id: string, motivo: string) =>
     api<{ clase: ClaseDetalle; resumen: ResumenDeCancelar }>(`/clases/${id}/cancelar/`, {
       method: 'POST',

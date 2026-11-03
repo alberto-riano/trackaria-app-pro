@@ -42,6 +42,25 @@ export default function ClaseScreen() {
   const [guardando, setGuardando] = useState(false);
   const [fallo, setFallo] = useState('');
 
+  // Pasar lista se ofrece cuando la clase ya ha empezado. El servidor la deja
+  // pasar desde el mismo día, pero a las diez de la mañana marcar quién vino a
+  // la de las siete es adivinar.
+  const pasandoLista = Boolean(clase?.lista && clase.empezada);
+
+  async function marcar(que: { reserva: string; vino: boolean } | { vinieron_todos: true }) {
+    if (!token || !clase || guardando) return;
+    setGuardando(true);
+    setFallo('');
+    try {
+      const { clase: actualizada } = await endpoints.pasarLista(token, clase.id, que);
+      setRecien(actualizada);
+    } catch (problema) {
+      setFallo(problema instanceof ApiError ? problema.message : 'No se ha podido guardar la lista.');
+    } finally {
+      setGuardando(false);
+    }
+  }
+
   async function quitar(devolver?: boolean) {
     if (!token || !clase || !quitando || guardando) return;
     setGuardando(true);
@@ -89,6 +108,15 @@ export default function ClaseScreen() {
                 <View style={styles.chips}>
                   <Chip label="Cancelada" tone="danger" />
                 </View>
+              ) : pasandoLista ? (
+                // Ya no importa cuántas plazas había: importa quién vino.
+                <Text style={styles.asistencia}>
+                  {(clase.sin_marcar ?? 0) > 0
+                    ? `${clase.sin_marcar} sin marcar de ${clase.apuntados.length}`
+                    : clase.apuntados.length === 0
+                      ? 'No había nadie apuntado'
+                      : `Vino ${clase.vinieron ?? 0} de ${clase.apuntados.length}`}
+                </Text>
               ) : (
                 <View style={styles.medidor}>
                   <Plazas ocupadas={clase.ocupadas} plazas={clase.plazas} />
@@ -102,6 +130,22 @@ export default function ClaseScreen() {
                   {clase.motivo || 'Esta clase está cancelada.'}
                 </Text>
               </Card>
+            ) : pasandoLista ? (
+              <View style={styles.acciones}>
+                {/* Es lo que pasa en nueve de cada diez clases, y ahorra tocar
+                    seis veces. Solo marca a los que faltaban: al que ya diste
+                    por ausente no se le cambia a la espalda. */}
+                {(clase.sin_marcar ?? 0) > 0 ? (
+                  <Boton
+                    titulo={
+                      clase.sin_marcar === clase.apuntados.length
+                        ? 'Vinieron todos'
+                        : `Vinieron los ${clase.sin_marcar} que faltan`
+                    }
+                    onPress={() => marcar({ vinieron_todos: true })}
+                  />
+                ) : null}
+              </View>
             ) : (
               <View style={styles.acciones}>
                 <Boton
@@ -133,7 +177,7 @@ export default function ClaseScreen() {
             )}
 
             <Bloque
-              titulo="Quién viene"
+              titulo={pasandoLista ? 'Quién vino' : 'Quién viene'}
               coletilla={
                 clase.apuntados.length === 0
                   ? undefined
@@ -142,12 +186,17 @@ export default function ClaseScreen() {
                     : `${clase.apuntados.length} personas`
               }>
               {clase.apuntados.length === 0 ? (
-                <Text style={styles.vacio}>Nadie apuntado todavía.</Text>
+                <Text style={styles.vacio}>
+                  {pasandoLista ? 'No había nadie apuntado.' : 'Nadie apuntado todavía.'}
+                </Text>
               ) : (
                 clase.apuntados.map((quien) => (
                   <Persona
                     key={quien.id}
                     quien={quien}
+                    pasandoLista={pasandoLista}
+                    guardando={guardando}
+                    onMarcar={(vino) => marcar({ reserva: quien.id, vino })}
                     // Una clase que ya pasó es historial: quitar a alguien de
                     // ayer no le libera ninguna plaza, solo borra lo que ocurrió.
                     sePuedeQuitar={!clase.empezada}
@@ -216,11 +265,14 @@ export default function ClaseScreen() {
  * se queda con el toque: va encima y es la que decide.
  */
 function Persona({
-  quien, sePuedeQuitar, onQuitar,
+  quien, sePuedeQuitar, onQuitar, pasandoLista, guardando, onMarcar,
 }: {
   quien: Apuntado;
   sePuedeQuitar: boolean;
   onQuitar: () => void;
+  pasandoLista: boolean;
+  guardando: boolean;
+  onMarcar: (vino: boolean) => void;
 }) {
   return (
     <View style={styles.persona}>
@@ -240,7 +292,47 @@ function Persona({
           </Text>
         </View>
       </Pressable>
-      {quien.estado === 'attended' ? (
+      {pasandoLista ? (
+        // Dos botones y no un interruptor: un interruptor solo tiene «sí» y
+        // «no», y aquí hace falta un tercer estado —«todavía no se sabe»— que
+        // es el que sale cuando no hay ninguno de los dos pulsado.
+        <View style={styles.marcar}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`${quien.nombre} vino`}
+            accessibilityState={{ selected: quien.estado === 'attended' }}
+            disabled={guardando}
+            onPress={() => onMarcar(true)}
+            style={({ pressed }) => [
+              styles.marca,
+              quien.estado === 'attended' && styles.marcaVino,
+              pressed && { opacity: 0.7 },
+            ]}>
+            <Ionicons
+              name="checkmark"
+              size={19}
+              color={quien.estado === 'attended' ? colors.success : colors.faint}
+            />
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`${quien.nombre} no vino`}
+            accessibilityState={{ selected: quien.estado === 'no_show' }}
+            disabled={guardando}
+            onPress={() => onMarcar(false)}
+            style={({ pressed }) => [
+              styles.marca,
+              quien.estado === 'no_show' && styles.marcaFalto,
+              pressed && { opacity: 0.7 },
+            ]}>
+            <Ionicons
+              name="close"
+              size={19}
+              color={quien.estado === 'no_show' ? colors.danger : colors.faint}
+            />
+          </Pressable>
+        </View>
+      ) : quien.estado === 'attended' ? (
         <Chip label="Vino" tone="success" />
       ) : quien.estado === 'no_show' ? (
         <Chip label="No vino" tone="danger" />
@@ -286,6 +378,15 @@ const styles = StyleSheet.create({
   chips: { marginTop: space.sm },
   medidor: { alignSelf: 'stretch', marginTop: space.md, paddingHorizontal: space.xl },
   acciones: { gap: space.sm },
+  asistencia: { fontSize: 15, fontWeight: '700', color: colors.muted, marginTop: space.md },
+  marcar: { flexDirection: 'row', gap: space.sm },
+  marca: {
+    width: 38, height: 38, borderRadius: 19, backgroundColor: colors.background,
+    borderWidth: 1.5, borderColor: 'transparent',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  marcaVino: { backgroundColor: colors.successSoft, borderColor: colors.success },
+  marcaFalto: { backgroundColor: colors.dangerSoft, borderColor: colors.danger },
   cancelar: { alignSelf: 'center', paddingVertical: space.md, paddingHorizontal: space.lg },
   cancelarTexto: { fontSize: 14, fontWeight: '700', color: colors.muted },
   aviso: { backgroundColor: colors.dangerSoft, borderColor: colors.dangerSoft },

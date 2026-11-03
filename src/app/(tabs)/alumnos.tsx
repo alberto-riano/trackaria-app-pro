@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Avisar } from '@/components/avisar';
 import { AltaDeAlumno, useBusqueda } from '@/components/buscar-alumno';
 import { BottomSheet } from '@/components/overlay';
 import { Avatar, Boton, EmptyState, Encabezado } from '@/components/ui';
@@ -28,6 +29,7 @@ export default function AlumnosScreen() {
   const insets = useSafeAreaInsets();
   const { usuario } = useSession();
   const [dandoDeAlta, setDandoDeAlta] = useState(false);
+  const [avisando, setAvisando] = useState(false);
   const { busca, setBusca, alumnos, refrescar } = useBusqueda(true);
 
   // Al volver a la pestaña se vuelve a preguntar: puede haberse dado de alta a
@@ -37,7 +39,21 @@ export default function AlumnosScreen() {
   return (
     <>
       <View style={[styles.cabecera, { paddingTop: insets.top + space.lg }]}>
-        <Encabezado titulo="Alumnos" coletilla={usuario?.centro.nombre} />
+        <Encabezado
+          titulo="Alumnos"
+          coletilla={usuario?.centro.nombre}
+          accion={
+            // Aquí y no en Clases: un aviso va a personas, no a un día, y en
+            // una cabecera llamada «Alumnos» el megáfono se adivina solo.
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Avisar a tus alumnos"
+              onPress={() => setAvisando(true)}
+              style={({ pressed }) => [styles.boton, pressed && { opacity: 0.7 }]}>
+              <Ionicons name="megaphone-outline" size={20} color={colors.brandDark} />
+            </Pressable>
+          }
+        />
 
         <View style={styles.buscador}>
           <Ionicons name="search" size={17} color={colors.faint} />
@@ -104,6 +120,8 @@ export default function AlumnosScreen() {
         </View>
       </ScrollView>
 
+      <Avisar visible={avisando} onClose={() => setAvisando(false)} />
+
       <BottomSheet visible={dandoDeAlta} onClose={() => setDandoDeAlta(false)} cerrarLabel="Cerrar">
         <AltaDeAlumno
           nombreSugerido={busca}
@@ -130,6 +148,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.md, marginBottom: space.md,
   },
   campo: { flex: 1, paddingVertical: space.md, fontSize: 16, color: colors.text },
+  boton: {
+    width: 40, height: 40, borderRadius: radius.md, backgroundColor: colors.brandSoft,
+    alignItems: 'center', justifyContent: 'center', marginTop: space.sm,
+  },
   lista: { gap: space.xs },
   fila: {
     flexDirection: 'row', alignItems: 'center', gap: space.md,
