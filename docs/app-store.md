@@ -1,0 +1,158 @@
+# Ficha de la App Store
+
+Textos listos para copiar en App Store Connect (app «Trackaria Pro»,
+id 6821286278). Si cambias algo en App Store Connect, cámbialo también aquí para
+no perderlo.
+
+Tiene que decir lo mismo que la ficha de Play ([play-store.md](play-store.md)):
+las dos tiendas revisan lo mismo y una contradicción es motivo de rechazo.
+
+## Información de la app
+
+| Campo | Valor |
+|---|---|
+| Nombre (máx. 30) | `Trackaria Pro` |
+| Subtítulo (máx. 30) | `Tu centro, en el móvil` |
+| Idioma principal | Español (España) |
+| Categoría principal | Empresa |
+| Categoría secundaria | Productividad |
+| Derechos de contenido | No contiene contenido de terceros |
+| Clasificación por edad | Responder «Ninguno» a todo salvo lo de abajo → 4+ |
+| Precio | Gratis |
+| Disponibilidad | España |
+| URL de soporte | https://www.trackaria.com/app/ |
+| URL de marketing | https://www.trackaria.com/ |
+| URL de la política de privacidad | https://www.trackaria.com/privacidad/ |
+| Copyright | `2026 Alberto Riaño González` |
+
+En la clasificación por edad, Apple pregunta si la app incluye contenido
+generado por el usuario o comunicación sin moderar. Aquí la comunicación es
+entre un negocio y sus propios clientes por el WhatsApp del centro, no entre
+desconocidos: no hay perfiles, ni búsqueda de gente, ni contenido público. Se
+responde eso si preguntan.
+
+## Texto promocional (máx. 170, se puede cambiar sin nueva versión)
+
+```
+Lo que está pendiente en tu centro, en una pantalla: quién pide cita, a quién no ha sabido contestar el bot y quién viene hoy a clase.
+```
+
+## Descripción
+
+```
+Trackaria Pro es la app del centro, no la de sus clientes. Si tu clínica, tu estudio de pilates o tu centro deportivo lleva la agenda y el WhatsApp con Trackaria, esta es la app para llevarlo desde el móvil cuando no estás delante del ordenador.
+
+(La app de tus clientes, para que reserven sus clases, es «Trackaria» a secas.)
+
+LO QUE ESTÁ PENDIENTE, Y NADA MÁS
+• La pantalla de inicio enseña solo dos cosas: quién está pidiendo cita y a quién no ha sabido contestarle el bot.
+• Cuando alguien pide hablar con una persona, te suena el móvil. Por cada mensaje de WhatsApp no: esos ya te suenan en tu WhatsApp.
+
+EL WHATSAPP DEL CENTRO
+• Las conversaciones del número del centro, diciendo en cada una quién está contestando: el bot o tú.
+• Coges tú la conversación con un toque, y se la devuelves al bot cuando terminas.
+
+LA AGENDA DEL DÍA
+• Las citas de hoy con su profesional, su tratamiento y de dónde salió cada una.
+• Las que están sin confirmar, para confirmarlas de una en una.
+
+LAS CLASES, CON ALGUIEN DELANTE
+• Las clases del día con sus plazas libres y quién viene a cada una.
+• Apuntar y quitar a alguien en el momento, que es lo que se pregunta en el mostrador.
+• Pasar lista: quién vino y quién no, de uno en uno o todos de golpe.
+• Cancelar una clase entera: a los apuntados se les devuelve su clase y se les avisa, y la app te dice a quién tienes que llamar porque no tiene la app instalada.
+• Dar de alta a quien acaba de entrar por la puerta, venderle un bono y apuntarle sin soltar el móvil.
+
+AVISOS A TUS ALUMNOS
+• Un aviso a todos, a los de una clase o a los de un horario concreto.
+• Antes de enviarlo te dice a cuánta gente le va a llegar de verdad.
+
+SOLO LO QUE USA TU CENTRO
+La app enseña únicamente las pestañas que te tocan. Un estudio que solo da clases no ve la agenda de consulta; una clínica sin WhatsApp Business no ve ni chats ni pendientes.
+
+LO QUE SE QUEDA EN EL ORDENADOR
+Los horarios semanales, los profesionales, los precios, los ajustes del bot y la suscripción se cambian en el panel web de Trackaria. La app es para lo que no puede esperar.
+
+Para entrar se usa la misma cuenta del panel de Trackaria. Trackaria no es un producto sanitario y no da consejo médico ni diagnósticos. La app no tiene compras integradas.
+```
+
+## Palabras clave (máx. 100, sin espacios)
+
+```
+agenda,citas,clases,pilates,fisioterapia,estudio,recepcion,negocio,whatsapp,reservas,gestion,centro
+```
+
+## Información para la revisión de Apple
+
+- **Se requiere inicio de sesión:** sí.
+- **Usuario y contraseña:** los de la cuenta del centro de demostración. **Se
+  escriben solo en App Store Connect, nunca en este archivo ni en el
+  repositorio.**
+- **Contacto:** Alberto Riaño González · email · teléfono.
+- **Notas** (en inglés, que es lo que leen los revisores):
+
+```
+Trackaria Pro is the staff app for physiotherapy clinics, pilates/yoga studios and sports centres in Spain that run their appointments, their WhatsApp Business number and their group classes with Trackaria. It is the counterpart of our client app "Trackaria" (com.trackaria.clases): clients book classes there, the centre runs its day here.
+
+Sign in with the demo centre credentials provided in the sign-in information. The demo centre has appointments, WhatsApp conversations and classes already loaded, so every screen has real-looking content.
+
+Things to try: "Pendiente" (people asking for an appointment and conversations where the bot handed over), open a chat and take it over from the bot, "Agenda" (today's appointments, confirm one), "Clases" (open a class, add or remove someone, take attendance, cancel the class), "Alumnos" (open a student, give them a class pack), and the announcement screen (send a notice to everyone, to one class or to one weekly time slot).
+
+PURPOSE AND AUDIENCE: staff of health and fitness centres in Spain that are already Trackaria customers. It is free, public in the Spanish App Store and works for any centre that uses Trackaria; it is not limited to the staff of one single company.
+
+NO IN-APP PURCHASES: the app sells nothing. Class packs are paid at the centre in person, and the centre's own Trackaria subscription is agreed and billed outside the app. The app contains no purchase flow, no price list and no link to any purchase page.
+
+WHATSAPP: conversations are received and sent through the official WhatsApp Business Platform (Cloud API) on our server. The app does not read the phone's WhatsApp, requests no permission related to it, and uses no WhatsApp branding.
+
+EXTERNAL SERVICES: our own Django backend hosted on AWS in the EU (Spain); Expo (over-the-air updates and push notifications delivered through Apple APNs); WhatsApp Business Platform (Meta) for the centre's conversations. No payment processor, no ads, no analytics or tracking SDKs, no third-party authentication.
+
+REGIONAL DIFFERENCES: none. Offered only in Spain, in Spanish, with the same features for everyone.
+
+REGULATED INDUSTRY: not a medical device; no medical advice, diagnosis or health measurements. Each centre is the data controller of its clients' data and Trackaria is its processor. Privacy policy: https://www.trackaria.com/privacidad/ · Support: https://www.trackaria.com/app/.
+
+ACCOUNTS: accounts belong to the centre and are created and removed by the centre from the Trackaria web panel, so the app has no sign-up and no self-service deletion; a user can ask for removal at soporte@trackaria.com. There is no consumer sign-up flow because the app is only useful to a centre that already has a Trackaria account, which is why demo credentials are provided.
+```
+
+El centro de demostración tiene que estar **lleno**: citas de esta semana,
+conversaciones con mensajes, clases con gente apuntada y algún bono. Un centro
+vacío parece una app a medio hacer, y eso es exactamente lo que le costó a la app
+de clientes un rechazo por 2.1.0 App Completeness. Grabar además un vídeo del
+recorrido completo en un iPhone real y adjuntarlo desde el primer envío.
+
+## Privacidad de la app (App Privacy)
+
+- **¿Recopilas datos?** Sí.
+- **Información de contacto → Dirección de correo** (la de quien entra):
+  funcionalidad de la app · vinculado a la identidad · sin rastreo.
+- **Información de contacto → Nombre** (el de quien entra y el de los clientes
+  del centro): funcionalidad de la app · vinculado · sin rastreo.
+- **Información de contacto → Número de teléfono** (el de los clientes del
+  centro): funcionalidad de la app · vinculado · sin rastreo.
+- **Contenido del usuario → Mensajes** (las conversaciones de WhatsApp del
+  centro): funcionalidad de la app · vinculado · sin rastreo.
+- **Identificadores → ID de usuario:** funcionalidad de la app · vinculado · sin
+  rastreo.
+- **Identificadores → ID del dispositivo** (el token de notificaciones):
+  funcionalidad de la app · vinculado · sin rastreo.
+- **Otros datos** (citas, reservas, bonos y asistencia): funcionalidad de la app
+  · vinculado · sin rastreo.
+- **Rastreo (tracking):** no. No hay publicidad ni analítica de terceros.
+- Nada de ubicación, contactos, salud, forma física, fotos, compras,
+  identificadores publicitarios ni datos de uso.
+
+Las filas de teléfono y mensajes son la diferencia con la app de clientes: esta
+app enseña y escribe datos de terceros. Si no se declaran y el revisor abre un
+chat, el rechazo es por declaración incompleta, que es peor que haberlo contado.
+
+## Capturas
+
+iPhone de 6,5" (1284 × 2778) y de 6,9" (1320 × 2868). Se sacan en el iPhone con
+el centro de demostración y se enmarcan con un título arriba. Mismo orden que en
+Play para que las dos tiendas cuenten lo mismo:
+
+1. Pendiente con dos cosas por hacer — «Lo que está pendiente, de un vistazo»
+2. Un chat con el relevo del bot — «Coge tú la conversación cuando haga falta»
+3. Una clase con quién viene — «Apunta a alguien con él delante»
+4. Pasar lista — «Quién vino, en dos toques»
+5. El aviso con «llegará a 14 alumnos» — «Avisa a una clase o a un horario»
+6. La agenda del día — «Las citas de hoy, sin abrir el ordenador»
