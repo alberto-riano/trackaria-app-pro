@@ -357,7 +357,10 @@ export const endpoints = {
     api<{ chat: Chat }>(`/chats/${id}/bot/`, { method: 'POST', token, body: { activo } }),
   cita: (token: string, id: string) => api<{ cita: CitaDetalle }>(`/citas/${id}/`, { token }),
   confirmarCita: (token: string, id: string) =>
-    api<{ cita: Cita }>(`/citas/${id}/confirmar/`, { method: 'POST', token }),
+    api<{ cita: Cita; avisado: boolean }>(`/citas/${id}/confirmar/`, { method: 'POST', token }),
+
+  rechazarCita: (token: string, id: string) =>
+    api<{ cita: Cita; avisado: boolean }>(`/citas/${id}/rechazar/`, { method: 'POST', token }),
 
   // Las clases en grupo. Apuntar y quitar; los horarios siguen en el panel.
   clases: (token: string, fecha?: string) =>

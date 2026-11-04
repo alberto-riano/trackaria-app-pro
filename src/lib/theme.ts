@@ -16,6 +16,8 @@ export const colors = {
   border: '#e5e7eb',
   surface: '#ffffff',
   background: '#f6f8f7',
+  // El verde de WhatsApp, para el botón que abre WhatsApp y para nada más.
+  whatsapp: '#25d366',
   success: '#15803d',
   successSoft: '#dcfce7',
   warning: '#b45309',

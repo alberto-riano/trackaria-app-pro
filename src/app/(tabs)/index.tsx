@@ -1,7 +1,10 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Redirect, router } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator, Linking, Pressable, RefreshControl, ScrollView,
+  StyleSheet, Text, View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Avatar, Boton, Card, Chip, EmptyState, Encabezado } from '@/components/ui';
@@ -45,22 +48,36 @@ function PendienteScreen() {
     useCallback((clave: string) => endpoints.pendientes(clave), []),
     { cada: 20_000 },
   );
-  const [confirmando, setConfirmando] = useState('');
+  const [decidiendo, setDecidiendo] = useState('');
   const [fallo, setFallo] = useState('');
 
   const cola = datos?.pendientes ?? null;
+  const hablando = (cola ?? []).filter((item) => item.tipo === 'conversacion');
+  const citas = (cola ?? []).filter((item) => item.tipo === 'cita');
 
-  async function confirmar(id: string) {
+  async function decidir(id: string, confirmada: boolean) {
     if (!token) return;
-    setConfirmando(id);
+    setDecidiendo(id);
     setFallo('');
     try {
-      await endpoints.confirmarCita(token, id);
+      const { avisado } = confirmada
+        ? await endpoints.confirmarCita(token, id)
+        : await endpoints.rechazarCita(token, id);
+      // Quien pidió la cita por WhatsApp recibe la respuesta por WhatsApp. Si
+      // no hay conversación, no se entera de nada y hay que llamarle: decirlo
+      // es la diferencia entre un trabajo terminado y uno a medias.
+      if (!avisado) {
+        setFallo(
+          confirmada
+            ? 'Confirmada, pero no se le ha podido avisar por WhatsApp. Llámale.'
+            : 'Rechazada, pero no se le ha podido avisar por WhatsApp. Llámale.',
+        );
+      }
       await recargar();
     } catch (problema) {
-      setFallo(problema instanceof ApiError ? problema.message : 'No se ha podido confirmar.');
+      setFallo(problema instanceof ApiError ? problema.message : 'No se ha podido hacer.');
     } finally {
-      setConfirmando('');
+      setDecidiendo('');
     }
   }
 
@@ -101,23 +118,76 @@ function PendienteScreen() {
           <Text style={styles.resumen}>
             {cola.length === 1 ? '1 cosa espera tu respuesta' : `${cola.length} cosas esperan tu respuesta`}
           </Text>
-          <View style={styles.lista}>
-            {cola.map((item) =>
-              item.tipo === 'conversacion' ? (
-                <TarjetaConversacion key={item.id} item={item} />
-              ) : (
+
+          {/* Las dos cosas van separadas y en este orden a propósito. Una
+              persona esperando en WhatsApp está esperando ahora; una cita sin
+              confirmar aguanta diez minutos. Mezcladas por antigüedad, lo
+              urgente quedaba enterrado entre lo que puede esperar. */}
+          {hablando.length > 0 ? (
+            <Grupo titulo="Te están esperando" cuantos={hablando.length} tono="alerta">
+              {hablando.map((item) => <TarjetaConversacion key={item.id} item={item} />)}
+            </Grupo>
+          ) : null}
+
+          {citas.length > 0 ? (
+            <Grupo titulo="Citas por confirmar" cuantos={citas.length}>
+              {citas.map((item) => (
                 <TarjetaCita
                   key={item.id}
                   item={item}
-                  ocupado={confirmando === item.id}
-                  onConfirmar={() => confirmar(item.id)}
+                  ocupado={decidiendo === item.id}
+                  onConfirmar={() => decidir(item.id, true)}
+                  onRechazar={() => decidir(item.id, false)}
                 />
-              ),
-            )}
-          </View>
+              ))}
+            </Grupo>
+          ) : null}
         </>
       )}
     </ScrollView>
+  );
+}
+
+/** Un bloque de la cola, con su título y cuántos hay. */
+function Grupo({
+  titulo, cuantos, tono = 'normal', children,
+}: {
+  titulo: string;
+  cuantos: number;
+  tono?: 'normal' | 'alerta';
+  children: React.ReactNode;
+}) {
+  return (
+    <View style={styles.grupo}>
+      <View style={styles.grupoCabecera}>
+        <Text style={[styles.grupoTitulo, tono === 'alerta' && { color: colors.warning }]}>
+          {titulo.toUpperCase()}
+        </Text>
+        <Text style={styles.grupoCuenta}>{cuantos}</Text>
+      </View>
+      <View style={styles.lista}>{children}</View>
+    </View>
+  );
+}
+
+/** Abrir WhatsApp con esa persona, para hablarlo ahí y no aquí. */
+function abrirWhatsapp(telefono: string) {
+  const limpio = (telefono || '').replace(/[^0-9]/g, '');
+  if (!limpio) return;
+  Linking.openURL(`https://wa.me/${limpio}`);
+}
+
+/** El botón redondo de WhatsApp, que es a donde se va a seguir la conversación. */
+function BotonWhatsapp({ telefono }: { telefono: string }) {
+  if (!telefono) return null;
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel="Abrir WhatsApp"
+      onPress={() => abrirWhatsapp(telefono)}
+      style={({ pressed }) => [styles.redondo, styles.redondoWhatsapp, pressed && { opacity: 0.7 }]}>
+      <Ionicons name="logo-whatsapp" size={19} color={colors.whatsapp} />
+    </Pressable>
   );
 }
 
@@ -126,17 +196,23 @@ function PendienteScreen() {
  * Antes salía de quitarle el «hace» a la fecha relativa, y eso producía
  * «esperando ahora mismo» y «esperando ayer», que no se dicen.
  */
-function cuantoLleva(minutos: number) {
-  if (minutos < 1) return 'acaba de llegar';
-  if (minutos < 60) return `esperando ${minutos} min`;
+function cuantoLleva(minutos: number, compacta: boolean) {
+  if (minutos < 1) return compacta ? 'ahora' : 'acaba de llegar';
+  if (minutos < 60) return compacta ? `${minutos} min` : `esperando ${minutos} min`;
   const horas = Math.floor(minutos / 60);
-  if (horas < 24) return `esperando ${horas} h`;
+  if (horas < 24) return compacta ? `${horas} h` : `esperando ${horas} h`;
   const dias = Math.floor(horas / 24);
-  return dias === 1 ? 'esperando desde ayer' : `esperando ${dias} días`;
+  if (dias === 1) return compacta ? 'ayer' : 'esperando desde ayer';
+  return compacta ? `${dias} días` : `esperando ${dias} días`;
 }
 
-/** En rojo a partir de media hora, que es lo que duele. */
-function Espera({ desde }: { desde: string }) {
+/**
+ * En rojo a partir de media hora, que es lo que duele.
+ *
+ * La versión corta es para la tarjeta de cita, que lleva tres botones al lado:
+ * con la frase entera no cabía y se quedaba en «esperan…», que no dice nada.
+ */
+function Espera({ desde, compacta = false }: { desde: string; compacta?: boolean }) {
   if (!desde) return null;
   const minutos = minutosDesde(desde);
   const tarde = minutos >= 30;
@@ -146,7 +222,7 @@ function Espera({ desde }: { desde: string }) {
       <Text
         style={[styles.esperaTexto, tarde && { color: colors.danger, fontWeight: '700' }]}
         numberOfLines={1}>
-        {cuantoLleva(minutos)}
+        {cuantoLleva(minutos, compacta)}
       </Text>
     </View>
   );
@@ -175,11 +251,16 @@ function TarjetaConversacion({ item }: { item: Extract<Pendiente, { tipo: 'conve
 
         <View style={styles.pie}>
           <Espera desde={item.desde} />
-          <Boton
-            titulo="Entrar"
-            style={styles.botonCompacto}
+          {/* Con el icono, porque lo que se abre es la conversación de
+              WhatsApp de esa persona y no una pantalla cualquiera. */}
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Entrar en la conversación de ${item.persona}`}
             onPress={() => router.push(`/chat/${item.id}`)}
-          />
+            style={({ pressed }) => [styles.entrar, pressed && { opacity: 0.8 }]}>
+            <Ionicons name="logo-whatsapp" size={17} color="#fff" />
+            <Text style={styles.entrarTexto}>Entrar</Text>
+          </Pressable>
         </View>
       </View>
     </Card>
@@ -187,11 +268,12 @@ function TarjetaConversacion({ item }: { item: Extract<Pendiente, { tipo: 'conve
 }
 
 function TarjetaCita({
-  item, ocupado, onConfirmar,
+  item, ocupado, onConfirmar, onRechazar,
 }: {
   item: Extract<Pendiente, { tipo: 'cita' }>;
   ocupado: boolean;
   onConfirmar: () => void;
+  onRechazar: () => void;
 }) {
   const { cita } = item;
   return (
@@ -215,13 +297,35 @@ function TarjetaCita({
           </Text>
         </View>
 
+        {/* Las tres salidas de una solicitud, por el tamaño que merecen: casi
+            siempre se confirma, a veces hay que hablarlo, y rara vez se dice
+            que no. Un «no» del mismo tamaño que el «sí» se pulsa por error. */}
         <View style={styles.pie}>
-          <Espera desde={item.desde} />
-          <Boton
-            titulo={ocupado ? 'Confirmando…' : 'Confirmar'}
-            style={styles.botonCompacto}
+          <Espera desde={item.desde} compacta />
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Rechazar la cita de ${item.persona}`}
+            disabled={ocupado}
+            onPress={onRechazar}
+            style={({ pressed }) => [
+              styles.redondo, styles.redondoNo, pressed && { opacity: 0.7 }, ocupado && { opacity: 0.4 },
+            ]}>
+            <Ionicons name="close" size={19} color={colors.danger} />
+          </Pressable>
+          <BotonWhatsapp telefono={item.telefono} />
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Confirmar la cita de ${item.persona}`}
+            disabled={ocupado}
             onPress={onConfirmar}
-          />
+            style={({ pressed }) => [styles.confirmar, pressed && { opacity: 0.8 }, ocupado && { opacity: 0.6 }]}>
+            {ocupado ? (
+              <ActivityIndicator color="#fff" size="small" />
+            ) : (
+              <Ionicons name="checkmark" size={21} color="#fff" />
+            )}
+            <Text style={styles.confirmarTexto}>Confirmar</Text>
+          </Pressable>
         </View>
       </View>
     </Card>
@@ -245,10 +349,37 @@ const styles = StyleSheet.create({
   cuando: { gap: 1 },
   cuandoFecha: { fontSize: 16, fontWeight: '800', color: colors.text },
   detalle: { fontSize: 13, color: colors.muted },
-  // La espera y el botón comparten línea: son la pregunta y la respuesta.
-  pie: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
-  botonCompacto: { minHeight: 38, paddingHorizontal: space.lg },
-  espera: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 5 },
+  // La espera y los botones comparten línea: son la pregunta y la respuesta.
+  // Con envoltura, porque tres botones y «esperando desde ayer» no siempre
+  // caben en 375 puntos y es mejor que bajen a que se recorten.
+  pie: { flexDirection: 'row', alignItems: 'center', gap: space.sm, flexWrap: 'wrap' },
+  entrar: {
+    flexDirection: 'row', alignItems: 'center', gap: 7,
+    minHeight: 38, paddingHorizontal: space.lg,
+    borderRadius: radius.md, backgroundColor: colors.brand,
+  },
+  entrarTexto: { fontSize: 15, fontWeight: '700', color: '#fff' },
+  confirmar: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    minHeight: 42, paddingHorizontal: space.md + 2,
+    borderRadius: radius.md, backgroundColor: colors.success,
+  },
+  confirmarTexto: { fontSize: 15, fontWeight: '800', color: '#fff' },
+  redondo: {
+    width: 38, height: 38, borderRadius: 19,
+    alignItems: 'center', justifyContent: 'center', borderWidth: 1,
+  },
+  redondoNo: { backgroundColor: colors.dangerSoft, borderColor: colors.dangerSoft },
+  redondoWhatsapp: { backgroundColor: colors.surface, borderColor: colors.border },
+  grupo: { gap: space.sm },
+  grupoCabecera: {
+    flexDirection: 'row', alignItems: 'baseline', gap: space.sm, paddingHorizontal: space.xs,
+  },
+  grupoTitulo: {
+    flex: 1, fontSize: 12, fontWeight: '800', color: colors.muted, letterSpacing: 0.5,
+  },
+  grupoCuenta: { fontSize: 13, fontWeight: '800', color: colors.faint },
+  espera: { flex: 1, minWidth: 54, flexDirection: 'row', alignItems: 'center', gap: 5 },
   esperaTexto: { fontSize: 13, color: colors.faint },
   error: {
     flexDirection: 'row', alignItems: 'center', gap: space.sm,
