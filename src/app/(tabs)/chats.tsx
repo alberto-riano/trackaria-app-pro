@@ -10,6 +10,7 @@ import { Avatar, EmptyState, Encabezado } from '@/components/ui';
 import { endpoints, type Chat } from '@/lib/api';
 import { useDatos } from '@/lib/datos';
 import { timeAgo } from '@/lib/format';
+import { sinMarcas } from '@/lib/marcas';
 import { useSession } from '@/lib/session';
 import { colors, radius, space } from '@/lib/theme';
 
@@ -198,7 +199,7 @@ function Fila({ item }: { item: Chat }) {
         </View>
 
         <Text style={[styles.ultimo, item.sin_leer > 0 && styles.ultimoSinLeer]} numberOfLines={1}>
-          {item.ultimo || 'Sin mensajes'}
+          {sinMarcas(item.ultimo) || 'Sin mensajes'}
         </Text>
 
         {item.esperando ? <Text style={styles.esperando}>Te está esperando</Text> : null}

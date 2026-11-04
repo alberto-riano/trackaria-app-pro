@@ -11,6 +11,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ApiError, endpoints, type Mensaje } from '@/lib/api';
 import { useDatos } from '@/lib/datos';
 import { hora } from '@/lib/format';
+import { conMarcas } from '@/lib/marcas';
 import { useSession } from '@/lib/session';
 import { colors, radius, space } from '@/lib/theme';
 
@@ -123,7 +124,7 @@ export default function ChatScreen() {
         <View style={styles.bloqueado}>
           <Ionicons name="sparkles" size={18} color={colors.bot} />
           <Text style={styles.bloqueadoTexto}>
-            Está contestando el bot. Toca <Text style={styles.negrita}>Contesto yo</Text> para escribir tú.
+            Está contestando el bot. Toca <Text style={styles.resalte}>Contesto yo</Text> para escribir tú.
           </Text>
         </View>
       ) : (
@@ -231,7 +232,11 @@ function Burbuja({ mensaje }: { mensaje: Mensaje }) {
           </View>
         ) : null}
         {mio && mensaje.autor ? <Text style={styles.autor}>{mensaje.autor}</Text> : null}
-        <Text style={[styles.burbujaTexto, mio && styles.burbujaTextoMio]}>{mensaje.texto}</Text>
+        <Text style={[styles.burbujaTexto, mio && styles.burbujaTextoMio]}>
+          {conMarcas(mensaje.texto).map((trozo, orden) => (
+            <Text key={orden} style={trozo.estilos.map((estilo) => styles[estilo])}>{trozo.texto}</Text>
+          ))}
+        </Text>
         <Text style={[styles.burbujaHora, mio && styles.burbujaHoraMia]}>{hora(new Date(mensaje.cuando))}</Text>
       </View>
     </View>
@@ -264,6 +269,12 @@ const styles = StyleSheet.create({
   autor: { fontSize: 11, fontWeight: '800', color: 'rgba(255,255,255,0.8)', letterSpacing: 0.3 },
   burbujaTexto: { fontSize: 15, color: colors.text, lineHeight: 21 },
   burbujaTextoMio: { color: '#fff' },
+  // El formato de WhatsApp dentro de la burbuja. Van sueltos y no mezclados
+  // con el estilo del texto porque un trozo puede llevar varios a la vez.
+  negrita: { fontWeight: '700' },
+  cursiva: { fontStyle: 'italic' },
+  tachado: { textDecorationLine: 'line-through' },
+  mono: { fontFamily: Platform.select({ ios: 'Menlo', default: 'monospace' }) },
   burbujaHora: { fontSize: 11, color: colors.faint, alignSelf: 'flex-end' },
   burbujaHoraMia: { color: 'rgba(255,255,255,0.75)' },
   bloqueado: {
@@ -272,7 +283,7 @@ const styles = StyleSheet.create({
     padding: space.lg, paddingBottom: space.xl,
   },
   bloqueadoTexto: { flex: 1, fontSize: 14, color: colors.muted, lineHeight: 20 },
-  negrita: { fontWeight: '800', color: colors.brandDark },
+  resalte: { fontWeight: '800', color: colors.brandDark },
   barra: {
     backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: colors.border,
     padding: space.md, paddingBottom: space.xl, gap: space.sm,

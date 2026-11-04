@@ -11,6 +11,7 @@ import { Avatar, Boton, Card, Chip, EmptyState, Encabezado } from '@/components/
 import { ApiError, endpoints, type Pendiente } from '@/lib/api';
 import { useDatos } from '@/lib/datos';
 import { comoFecha, dayTitle, minutosDesde } from '@/lib/format';
+import { sinMarcas } from '@/lib/marcas';
 import { useSession } from '@/lib/session';
 import { colors, radius, space } from '@/lib/theme';
 
@@ -258,7 +259,7 @@ function TarjetaConversacion({ item }: { item: Extract<Pendiente, { tipo: 'conve
 
         {/* Lo que dijo, literal. Es lo único que te deja decidir si corre prisa. */}
         {item.mensaje ? (
-          <Text style={styles.cita} numberOfLines={2}>«{item.mensaje}»</Text>
+          <Text style={styles.cita} numberOfLines={2}>«{sinMarcas(item.mensaje)}»</Text>
         ) : null}
 
         <View style={styles.pie}>
