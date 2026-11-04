@@ -319,12 +319,24 @@ function TarjetaCita({
             <Text style={styles.confirmaTexto}>
               ¿Rechazar esta cita? Se le dirá por WhatsApp.
             </Text>
+            {/* La salida de en medio, que muchas veces es la buena: antes de
+                decirle que no, preguntarle si le viene otro día. Va como enlace
+                y no como tercer botón para que no compita con la decisión. */}
+            {item.chat ? (
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => router.push(`/chat/${item.chat}`)}
+                style={({ pressed }) => [styles.hablarAntes, pressed && { opacity: 0.6 }]}>
+                <Ionicons name="chatbubble-ellipses-outline" size={15} color={colors.brandDark} />
+                <Text style={styles.hablarAntesTexto}>Hablar con {item.persona.split(' ')[0]} antes</Text>
+              </Pressable>
+            ) : null}
             <View style={styles.confirmaBotones}>
               <Pressable
                 accessibilityRole="button"
                 onPress={() => setPreguntando(false)}
                 style={({ pressed }) => [styles.noGracias, pressed && { opacity: 0.7 }]}>
-                <Text style={styles.noGraciasTexto}>Dejarlo</Text>
+                <Text style={styles.noGraciasTexto}>Cancelar</Text>
               </Pressable>
               <Pressable
                 accessibilityRole="button"
@@ -418,6 +430,10 @@ const styles = StyleSheet.create({
   },
   confirmaTexto: { fontSize: 14, color: colors.danger, fontWeight: '600', lineHeight: 19 },
   confirmaBotones: { flexDirection: 'row', gap: space.sm },
+  hablarAntes: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 2 },
+  hablarAntesTexto: {
+    fontSize: 14, fontWeight: '700', color: colors.brandDark, textDecorationLine: 'underline',
+  },
   noGracias: {
     flex: 1, minHeight: 40, borderRadius: radius.md, backgroundColor: colors.surface,
     alignItems: 'center', justifyContent: 'center',
