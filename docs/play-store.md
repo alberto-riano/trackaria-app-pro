@@ -115,14 +115,37 @@ tamaño al que se decide. No lleva chapa de «PRO»: tres letras en un rectángu
 de ocho píxeles no se leen.
 
 
-Orden propuesto (las tres primeras son las que decide la gente):
+Las piezas las monta `scripts/iconos.py` (el icono) y `scripts/capturas.py`
+(todo lo demás). El segundo coge las capturas en crudo del móvil, les pone el
+titular encima sobre el crema de la marca y las deja en 1080 × 1920:
 
-1. Pendiente con dos cosas por hacer — «Lo que está pendiente, de un vistazo»
+```
+python3 scripts/capturas.py ~/Desktop/capturas-pro
+```
+
+Las capturas en crudo se nombran `01.png`, `02.png`… en el orden de la lista
+`TITULARES` del script, y el resultado sale en `~/Desktop/capturas-pro/play/`.
+Para rehacer una sola, se sustituye su `NN.png` y se vuelve a ejecutar.
+
+Orden de la ficha (de la tercera no pasa casi nadie, así que las tres primeras
+tienen que contar solas para quién es la app y qué resuelve):
+
+1. Pendiente — «Lo que está pendiente, de un vistazo»
 2. Un chat con el relevo del bot — «Coge tú la conversación cuando haga falta»
-3. Una clase con quién viene — «Apunta a alguien con él delante»
-4. Pasar lista — «Quién vino, en dos toques»
-5. El aviso con «llegará a 14 alumnos» — «Avisa a una clase o a un horario»
-6. La agenda del día — «Las citas de hoy, sin abrir el ordenador»
+3. Una clase por dentro — «Mira quién viene antes de abrir la sala»
+4. El aviso, con el «llegará a N alumnos» — «Avisa a una clase o a un horario»
+5. La agenda del día — «Las citas de hoy, sin abrir el ordenador»
+6. Las clases de hoy — «El día entero, clase a clase»
+7. La ficha de un alumno — «¿Me queda bono?, contestado al momento»
+
+La de Cuenta se quedó fuera a propósito: nadie se instala una app por su
+pantalla de ajustes, y es la única que enseña el teléfono del centro.
+
+Los teléfonos que salgan en una captura se tapan antes de publicar, con el
+diccionario `TAPADOS` del script: donde el número se lee grande se repinta con
+uno limpio, y donde ya estaba medio tapado basta con emborronarlo. Son números
+inventados, pero tienen la forma de uno de verdad y la ficha queda publicada
+para siempre.
 
 No metas capturas con datos de un centro real. Se sacan del centro de
 demostración, que además es el que va a mirar el revisor.

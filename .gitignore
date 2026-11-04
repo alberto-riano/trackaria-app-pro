@@ -44,3 +44,6 @@ example
 
 # configuración local de Claude Code
 .claude/
+
+# Las piezas montadas de la ficha salen de las capturas en crudo, que sí están.
+assets/store/capturas/play/

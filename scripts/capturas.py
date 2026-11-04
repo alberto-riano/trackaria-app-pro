@@ -9,12 +9,17 @@ Cómo se usa:
 
 1. Saca las capturas en el móvil, con el centro de demostración y nunca con
    datos de un centro real.
-2. Déjalas en una carpeta, nombradas `01.png`, `02.png`… en el orden de
-   TITULARES.
-3. `python3 scripts/capturas.py ~/Desktop/capturas-pro`
+2. Déjalas en `assets/store/capturas/`, nombradas `01.png`, `02.png`… en el
+   orden de TITULARES.
+3. `python3 scripts/capturas.py`
 
 Deja en esa misma carpeta un `play/` con todo listo para subir. El gráfico
 destacado no necesita capturas y se genera siempre.
+
+Las capturas en crudo viven en el repo a propósito: son lo único que no se
+puede rehacer solo, porque hacen falta un móvil y un centro con datos. Con
+ellas dentro, la ficha entera se reconstruye con una orden aunque pase un año.
+Para rehacer una sola, se sustituye su `NN.png` y se vuelve a ejecutar.
 
 Necesita Pillow, que no es dependencia del proyecto: `pip install Pillow` en un
 entorno aparte.
@@ -203,7 +208,7 @@ def main():
     if len(sys.argv) > 1:
         carpeta = pathlib.Path(sys.argv[1]).expanduser()
     else:
-        carpeta = pathlib.Path.home() / 'Desktop' / 'capturas-pro'
+        carpeta = RAIZ / 'assets' / 'store' / 'capturas'
     salida = carpeta / 'play'
     salida.mkdir(parents=True, exist_ok=True)
 
