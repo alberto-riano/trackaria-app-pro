@@ -1,10 +1,12 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Stack, useLocalSearchParams } from 'expo-router';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView,
+  ActivityIndicator, Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView,
   StyleSheet, Text, TextInput, View,
 } from 'react-native';
+
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ApiError, endpoints, type Mensaje } from '@/lib/api';
 import { useDatos } from '@/lib/datos';
@@ -35,6 +37,17 @@ export default function ChatScreen() {
   const [cambiando, setCambiando] = useState(false);
   const [fallo, setFallo] = useState('');
   const scroll = useRef<ScrollView>(null);
+  const insets = useSafeAreaInsets();
+
+  // Abrir el teclado no cambia el contenido, solo el alto, así que el hilo no
+  // se movía solo y el último mensaje quedaba tapado. Se baja al final en
+  // cuanto el teclado termina de subir.
+  useEffect(() => {
+    const abierto = Keyboard.addListener('keyboardDidShow', () => {
+      scroll.current?.scrollToEnd({ animated: true });
+    });
+    return () => abierto.remove();
+  }, []);
 
   const chat = datos?.chat ?? null;
   const mensajes = datos?.mensajes ?? [];
@@ -77,7 +90,10 @@ export default function ChatScreen() {
     <KeyboardAvoidingView
       style={styles.pantalla}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 96 : 0}>
+      // La altura de la cabecera, medida y no a ojo: eran 96 puntos fijos, y
+      // en un móvil con más muesca el hilo subía de menos y el último mensaje
+      // se quedaba debajo del teclado, que es justo el que querías leer.
+      keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top + 44 : 0}>
       <Stack.Screen options={{ title: chat?.persona ?? '' }} />
 
       {chat ? <Mando bot={chat.bot} ocupado={cambiando} onCambiar={cambiarMando} /> : null}
