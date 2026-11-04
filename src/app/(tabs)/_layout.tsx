@@ -76,8 +76,21 @@ export default function TabsLayout() {
   const pestanas = 2 + (hayWhatsapp ? 2 : 0) + (hayCitas ? 1 : 0) + (hayClases ? 1 : 0);
   const letra = pestanas >= 6 ? 10 : 11;
 
+  // La barra se rehace entera cuando cambia la forma del centro.
+  //
+  // Una pestaña que no aplica se quita con `href: null`, y el navegador de
+  // nativo se queda con la lista de rutas que tenía: al cerrar sesión en un
+  // estudio de solo clases y entrar en un centro que lo tiene todo, alguna de
+  // las que volvían a tocar no reaparecía hasta cerrar la app del todo. Con una
+  // llave por forma, el navegador se monta de nuevo y la lista sale limpia.
+  //
+  // No cuesta nada: esto solo cambia al entrar o al salir, que es cuando la app
+  // va a empezar por la primera pestaña de todas formas.
+  const forma = `${hayWhatsapp}-${hayCitas}-${hayClases}`;
+
   return (
     <Tabs
+      key={forma}
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: colors.brand,
