@@ -42,12 +42,37 @@ ANCHO, ALTO = 1080, 1920
 TITULARES = [
     ('Lo que está pendiente,\nde un vistazo', 'Quién pide cita y a quién no supo contestar el bot'),
     ('Coge tú la conversación\ncuando haga falta', 'El WhatsApp del centro, con el relevo del bot'),
-    ('Apunta a alguien\ncon él delante', 'Las clases del día y quién viene a cada una'),
-    ('Pasa lista\nen dos toques', 'Quién vino y quién no, sin papel'),
+    ('Mira quién viene\nantes de abrir la sala', 'Y apunta a alguien con él delante'),
     ('Avisa a una clase\no a un horario', 'Y te dice a cuánta gente le va a llegar de verdad'),
     ('Las citas de hoy,\nsin abrir el ordenador', 'Con su profesional y las que faltan por confirmar'),
+    ('El día entero,\nclase a clase', 'Lo que está lleno y lo que todavía tiene hueco'),
+    ('«¿Me queda bono?»,\ncontestado al momento', 'Sus clases, sus bonos y cuándo vuelve'),
 ]
 
+# Trozos de cada captura que hay que tapar antes de publicarla.
+#
+# Los teléfonos del centro de demostración son inventados, pero tienen la forma
+# de uno de verdad, y la ficha de Play queda publicada para siempre. Tapar
+# cuesta menos que arrepentirse.
+#
+# Un trozo con `texto` se repinta con ese texto, en la tipografía del sistema y
+# del color que tenía: donde el número se lee grande y nítido, un borrón se ve
+# a la legua y parece que la app tiene algo que esconder. Un trozo sin `texto`
+# se emborrona, que es lo que toca donde ya estaba medio tapado de por sí.
+#
+# Las medidas son el rectángulo exacto que ocupan las letras, en fracciones del
+# ancho y el alto de la captura: así siguen valiendo desde otro móvil.
+SISTEMA = '/System/Library/Fonts/SFNS.ttf'
+
+TAPADOS = {
+    4: [  # el teléfono que asoma detrás de la hoja del aviso
+        {'caja': (0.1922, 0.2930, 0.4506, 0.3040)},
+    ],
+    7: [  # el teléfono de la ficha del alumno
+        {'caja': (0.3659, 0.2615, 0.6764, 0.2750), 'texto': '+34600000000',
+         'tinta': (11, 91, 85), 'fondo': (255, 255, 255), 'peso': 'Semibold'},
+    ],
+}
 
 def fuente(ruta, tamano):
     return ImageFont.truetype(ruta, tamano)
@@ -63,9 +88,52 @@ def centrado(dib, texto, fuente_, y, color, interlineado=1.18):
     return y
 
 
-def pantalla(captura, ancho_max=880, alto_max=1430):
+def ajustada(texto, peso, ancho):
+    """La tipografía del sistema al tamaño que hace que el texto mida eso."""
+    tamano = 40
+    for _ in range(8):
+        f = ImageFont.truetype(SISTEMA, tamano)
+        f.set_variation_by_name(peso)
+        medida = ImageDraw.Draw(Image.new('RGB', (1, 1))).textbbox((0, 0), texto, font=f)
+        actual = medida[2] - medida[0]
+        if abs(actual - ancho) <= 1:
+            break
+        tamano = max(6, round(tamano * ancho / actual))
+    return f, medida
+
+
+def tapar(im, trozos):
+    """Repinta o emborrona esos trozos de la captura, sin tocar el resto."""
+    dib = ImageDraw.Draw(im)
+    for trozo in trozos:
+        izq, arr, der, aba = trozo['caja']
+        caja = (round(izq * im.width), round(arr * im.height),
+                round(der * im.width), round(aba * im.height))
+
+        if 'texto' not in trozo:
+            recorte = im.crop(caja)
+            # El radio va con el alto: lo justo para que no se reconstruya
+            # ninguna cifra, y no tanto como para dejar un manchón.
+            im.paste(recorte.filter(ImageFilter.GaussianBlur(max(4, recorte.height * 0.45))), caja)
+            continue
+
+        # Un margen al borrar, para no dejar los restos del trazo anterior
+        # asomando por los lados de lo nuevo.
+        margen = round((caja[3] - caja[1]) * 0.35)
+        dib.rectangle((caja[0] - margen, caja[1] - margen,
+                       caja[2] + margen, caja[3] + margen), fill=trozo['fondo'])
+        f, medida = ajustada(trozo['texto'], trozo.get('peso', 'Regular'), caja[2] - caja[0])
+        dib.text((caja[0] - medida[0], caja[1] - medida[1]), trozo['texto'], font=f, fill=trozo['tinta'])
+    return im
+
+
+def pantalla(captura, trozos=(), ancho_max=880, alto_max=1430):
     """La captura del móvil, encajada y con la esquina redondeada."""
     im = Image.open(captura).convert('RGB')
+    # Se tapa antes de reducir, sobre la imagen grande: así lo repintado se
+    # reduce igual que el resto de la captura y no se nota el remiendo.
+    if trozos:
+        im = tapar(im, trozos)
     factor = min(ancho_max / im.width, alto_max / im.height)
     im = im.resize((round(im.width * factor), round(im.height * factor)), Image.LANCZOS)
     radio = round(im.width * 0.055)
@@ -86,7 +154,7 @@ def con_sombra(lienzo, im, donde):
     lienzo.alpha_composite(im.convert('RGBA'), donde)
 
 
-def pieza(captura, titular, pie):
+def pieza(captura, titular, pie, trozos=()):
     lienzo = Image.new('RGBA', (ANCHO, ALTO), CREMA + (255,))
     dib = ImageDraw.Draw(lienzo)
 
@@ -96,8 +164,12 @@ def pieza(captura, titular, pie):
     # Una raya de oro entre el titular y la pantalla: separa sin meter una caja.
     dib.rounded_rectangle([(ANCHO - 96) / 2, y + 36, (ANCHO + 96) / 2, y + 44], 4, fill=ORO)
 
+    # La pantalla entra entera y no se sale por abajo. Sobresalir queda más
+    # moderno, pero lo último de cualquier pantalla de esta app es la barra de
+    # pestañas con los globitos, y esos globitos son media venta: son la prueba
+    # de que la app te avisa sola de que hay algo esperándote.
     arriba = max(y + 96, 430)
-    im = pantalla(captura, alto_max=ALTO - arriba + 120)
+    im = pantalla(captura, trozos, alto_max=ALTO - arriba - 56)
     con_sombra(lienzo, im, ((ANCHO - im.width) // 2, arriba))
     return lienzo.convert('RGB')
 
@@ -144,7 +216,7 @@ def main():
         if not origen.exists():
             continue
         destino = salida / f'{i:02d}.png'
-        pieza(origen, titular, pie).save(destino)
+        pieza(origen, titular, pie, TAPADOS.get(i, ())).save(destino)
         print(f'{destino}  {ANCHO}×{ALTO}')
         hechas += 1
 
