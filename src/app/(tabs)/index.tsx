@@ -288,6 +288,7 @@ function TarjetaCita({
   onRechazar: () => void;
 }) {
   const { cita } = item;
+  const [preguntando, setPreguntando] = useState(false);
   return (
     <Card style={styles.tarjeta}>
       <View style={[styles.franja, { backgroundColor: cita.color || colors.brand }]} />
@@ -309,16 +310,40 @@ function TarjetaCita({
           </Text>
         </View>
 
-        {/* Las tres salidas de una solicitud, por el tamaño que merecen: casi
-            siempre se confirma, a veces hay que hablarlo, y rara vez se dice
-            que no. Un «no» del mismo tamaño que el «sí» se pulsa por error. */}
+        {/* Rechazar se pregunta antes, y aquí mismo: le va a llegar un «no»
+            por WhatsApp a una persona y eso no se deshace. La pregunta
+            sustituye a la fila de botones en vez de taparla con un aviso del
+            sistema, para que se siga viendo de qué cita se está hablando. */}
+        {preguntando ? (
+          <View style={styles.confirmaRechazo}>
+            <Text style={styles.confirmaTexto}>
+              ¿Rechazar esta cita? Se le dirá por WhatsApp.
+            </Text>
+            <View style={styles.confirmaBotones}>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => setPreguntando(false)}
+                style={({ pressed }) => [styles.noGracias, pressed && { opacity: 0.7 }]}>
+                <Text style={styles.noGraciasTexto}>Dejarlo</Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`Confirmar que se rechaza la cita de ${item.persona}`}
+                disabled={ocupado}
+                onPress={() => { setPreguntando(false); onRechazar(); }}
+                style={({ pressed }) => [styles.siRechazar, pressed && { opacity: 0.8 }]}>
+                <Text style={styles.siRechazarTexto}>Sí, rechazar</Text>
+              </Pressable>
+            </View>
+          </View>
+        ) : (
         <View style={styles.pie}>
           <Espera desde={item.desde} compacta />
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={`Rechazar la cita de ${item.persona}`}
             disabled={ocupado}
-            onPress={onRechazar}
+            onPress={() => setPreguntando(true)}
             style={({ pressed }) => [
               styles.redondo, styles.redondoNo, pressed && { opacity: 0.7 }, ocupado && { opacity: 0.4 },
             ]}>
@@ -339,6 +364,7 @@ function TarjetaCita({
             <Text style={styles.confirmarTexto}>Confirmar</Text>
           </Pressable>
         </View>
+        )}
       </View>
     </Card>
   );
@@ -374,7 +400,10 @@ const styles = StyleSheet.create({
   confirmar: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
     minHeight: 42, paddingHorizontal: space.md + 2,
-    borderRadius: radius.md, backgroundColor: colors.success,
+    // El verde de la marca y no el de «correcto»: es el mismo botón que
+    // «Entrar», y dos verdes distintos en la misma pantalla se leen como
+    // dos cosas distintas cuando son la misma.
+    borderRadius: radius.md, backgroundColor: colors.brand,
   },
   confirmarTexto: { fontSize: 15, fontWeight: '800', color: '#fff' },
   redondo: {
@@ -383,6 +412,22 @@ const styles = StyleSheet.create({
   },
   redondoNo: { backgroundColor: colors.dangerSoft, borderColor: colors.dangerSoft },
   redondoHablar: { backgroundColor: colors.brandSoft, borderColor: colors.brandSoft },
+  confirmaRechazo: {
+    gap: space.sm, backgroundColor: colors.dangerSoft,
+    borderRadius: radius.md, padding: space.md,
+  },
+  confirmaTexto: { fontSize: 14, color: colors.danger, fontWeight: '600', lineHeight: 19 },
+  confirmaBotones: { flexDirection: 'row', gap: space.sm },
+  noGracias: {
+    flex: 1, minHeight: 40, borderRadius: radius.md, backgroundColor: colors.surface,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  noGraciasTexto: { fontSize: 15, fontWeight: '700', color: colors.text },
+  siRechazar: {
+    flex: 1, minHeight: 40, borderRadius: radius.md, backgroundColor: colors.danger,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  siRechazarTexto: { fontSize: 15, fontWeight: '800', color: '#fff' },
   grupo: { gap: space.sm },
   grupoCabecera: {
     flexDirection: 'row', alignItems: 'baseline', gap: space.sm, paddingHorizontal: space.xs,
