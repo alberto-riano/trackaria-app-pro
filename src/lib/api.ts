@@ -127,6 +127,8 @@ export type Pendiente =
       telefono: string;
       motivo: string;
       motivo_texto: string;
+      /** La conversación de la que salió, para ir a hablarlo antes de decidir. */
+      chat: string;
       cita: Cita;
       desde: string;
     };

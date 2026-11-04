@@ -2,7 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { Redirect, router } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
-  ActivityIndicator, Linking, Pressable, RefreshControl, ScrollView,
+  ActivityIndicator, Pressable, RefreshControl, ScrollView,
   StyleSheet, Text, View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -108,8 +108,8 @@ function PendienteScreen() {
             title="Nada que decidir"
             text={
               usuario?.centro.citas === false
-                ? 'El bot está llevando las conversaciones. Aquí aparecerá quien pida hablar con una persona.'
-                : 'El bot está llevando las conversaciones. Aquí aparecerá quien pida hablar con una persona y las citas que falten por confirmar.'
+                ? 'El bot está llevando las conversaciones. Aquí aparecerá quien quiera hablar contigo.'
+                : 'El bot está llevando las conversaciones. Aquí aparecerá quien quiera hablar contigo y las citas que falten por confirmar.'
             }
           />
         </Card>
@@ -123,23 +123,32 @@ function PendienteScreen() {
               persona esperando en WhatsApp está esperando ahora; una cita sin
               confirmar aguanta diez minutos. Mezcladas por antigüedad, lo
               urgente quedaba enterrado entre lo que puede esperar. */}
-          {hablando.length > 0 ? (
-            <Grupo titulo="Te están esperando" cuantos={hablando.length} tono="alerta">
-              {hablando.map((item) => <TarjetaConversacion key={item.id} item={item} />)}
-            </Grupo>
-          ) : null}
+          {/* Este bloque sale aunque esté vacío: «ninguna» es información —el
+              bot va solo— y un bloque que desaparece deja dudando si es que no
+              hay nada o es que la app no lo está enseñando. */}
+          <Grupo titulo="Te están esperando" cuantos={hablando.length} tono="alerta">
+            {hablando.length === 0 ? (
+              <Text style={styles.grupoVacio}>Ninguna. El bot va solo.</Text>
+            ) : (
+              hablando.map((item) => <TarjetaConversacion key={item.id} item={item} />)
+            )}
+          </Grupo>
 
-          {citas.length > 0 ? (
+          {usuario?.centro.citas !== false ? (
             <Grupo titulo="Citas por confirmar" cuantos={citas.length}>
-              {citas.map((item) => (
-                <TarjetaCita
-                  key={item.id}
-                  item={item}
-                  ocupado={decidiendo === item.id}
-                  onConfirmar={() => decidir(item.id, true)}
-                  onRechazar={() => decidir(item.id, false)}
-                />
-              ))}
+              {citas.length === 0 ? (
+                <Text style={styles.grupoVacio}>Ninguna sin confirmar.</Text>
+              ) : (
+                citas.map((item) => (
+                  <TarjetaCita
+                    key={item.id}
+                    item={item}
+                    ocupado={decidiendo === item.id}
+                    onConfirmar={() => decidir(item.id, true)}
+                    onRechazar={() => decidir(item.id, false)}
+                  />
+                ))
+              )}
             </Grupo>
           ) : null}
         </>
@@ -170,23 +179,26 @@ function Grupo({
   );
 }
 
-/** Abrir WhatsApp con esa persona, para hablarlo ahí y no aquí. */
-function abrirWhatsapp(telefono: string) {
-  const limpio = (telefono || '').replace(/[^0-9]/g, '');
-  if (!limpio) return;
-  Linking.openURL(`https://wa.me/${limpio}`);
-}
-
-/** El botón redondo de WhatsApp, que es a donde se va a seguir la conversación. */
-function BotonWhatsapp({ telefono }: { telefono: string }) {
-  if (!telefono) return null;
+/**
+ * Ir a hablarlo, sin decidir todavía.
+ *
+ * Se abre la conversación **de dentro de la app**, que es donde está el hilo
+ * con su contexto y donde se puede quitar al bot de en medio. Mandaba a
+ * WhatsApp por el número, y eso era salirse de la app para acabar escribiendo
+ * en el sitio donde no se ve quién está contestando.
+ *
+ * Si esa cita no salió de ninguna conversación no hay nada que abrir y el botón
+ * no se dibuja: un botón que no lleva a ningún sitio es peor que no tenerlo.
+ */
+function BotonHablar({ chat }: { chat: string }) {
+  if (!chat) return null;
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel="Abrir WhatsApp"
-      onPress={() => abrirWhatsapp(telefono)}
-      style={({ pressed }) => [styles.redondo, styles.redondoWhatsapp, pressed && { opacity: 0.7 }]}>
-      <Ionicons name="logo-whatsapp" size={19} color={colors.whatsapp} />
+      accessibilityLabel="Abrir la conversación"
+      onPress={() => router.push(`/chat/${chat}`)}
+      style={({ pressed }) => [styles.redondo, styles.redondoHablar, pressed && { opacity: 0.7 }]}>
+      <Ionicons name="chatbubble-ellipses-outline" size={19} color={colors.brandDark} />
     </Pressable>
   );
 }
@@ -312,7 +324,7 @@ function TarjetaCita({
             ]}>
             <Ionicons name="close" size={19} color={colors.danger} />
           </Pressable>
-          <BotonWhatsapp telefono={item.telefono} />
+          <BotonHablar chat={item.chat} />
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={`Confirmar la cita de ${item.persona}`}
@@ -370,7 +382,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', borderWidth: 1,
   },
   redondoNo: { backgroundColor: colors.dangerSoft, borderColor: colors.dangerSoft },
-  redondoWhatsapp: { backgroundColor: colors.surface, borderColor: colors.border },
+  redondoHablar: { backgroundColor: colors.brandSoft, borderColor: colors.brandSoft },
   grupo: { gap: space.sm },
   grupoCabecera: {
     flexDirection: 'row', alignItems: 'baseline', gap: space.sm, paddingHorizontal: space.xs,
@@ -379,6 +391,10 @@ const styles = StyleSheet.create({
     flex: 1, fontSize: 12, fontWeight: '800', color: colors.muted, letterSpacing: 0.5,
   },
   grupoCuenta: { fontSize: 13, fontWeight: '800', color: colors.faint },
+  grupoVacio: {
+    fontSize: 14, color: colors.muted, paddingVertical: space.sm,
+    paddingHorizontal: space.xs,
+  },
   espera: { flex: 1, minWidth: 54, flexDirection: 'row', alignItems: 'center', gap: 5 },
   esperaTexto: { fontSize: 13, color: colors.faint },
   error: {
