@@ -157,31 +157,77 @@ def tapar(im, trozos):
 # devolverle lo que el sistema no guarda, no inventarse nada.
 ISLA = (0.3576, 0.0143, 0.6424, 0.0527)
 
-# El grosor del marco y el color del cuerpo, en fracciones del ancho del móvil.
-MARCO = 0.030
-CUERPO = (46, 46, 50)
-CANTO = (92, 92, 100)
+# Hasta dónde llega la barra de estado y de dónde se saca con qué taparla.
+#
+# La hora y la batería del momento en que se disparó la captura no dicen nada
+# de la app y ensucian: cada pieza salía con una hora distinta y con la batería
+# al 43 %. Se tapan copiando la franja de justo debajo y estirándola hacia
+# arriba, en vez de pintar un rectángulo de un color elegido a ojo: así vale
+# igual para una pantalla de fondo liso que para una con cabecera de otro
+# color, y no queda una costura a media altura.
+BARRA = 0.052
+MUESTRA = 0.056
+
+# El marco. Grueso en fracciones del ancho de la pantalla.
+MARCO = 0.034
+CUERPO = (26, 26, 28)      # el negro del bisel
+RAIL = (154, 152, 158)     # el titanio del canto
+BOTON = (120, 118, 124)
+
+# Los botones, en fracciones del alto del móvil: (lado, desde, hasta).
+BOTONES = [
+    ('izq', 0.150, 0.190),   # el de acción
+    ('izq', 0.225, 0.300),   # subir volumen
+    ('izq', 0.315, 0.390),   # bajar volumen
+    ('der', 0.235, 0.345),   # encendido
+]
+
+
+def sin_barra_de_estado(im):
+    """Quita la hora y la batería, estirando hacia arriba lo que hay debajo."""
+    alto_barra = round(BARRA * im.height)
+    origen = round(MUESTRA * im.height)
+    franja = im.crop((0, origen, im.width, origen + 4))
+    im.paste(franja.resize((im.width, alto_barra), Image.NEAREST), (0, 0))
+    return im
 
 
 def enmarcar(im):
-    """Mete la pantalla en un cuerpo de iPhone.
+    """Mete la pantalla en un cuerpo de iPhone, con su canto y sus botones.
 
     El marco no es adorno: es lo que le da un borde cuando el fondo del lienzo
-    y el de la app son del mismo color y la pantalla se funde con el papel.
-    Y de paso se lee como un móvil y no como un recorte.
+    y el de la app son del mismo color y la pantalla se funde con el papel. Y
+    el canto claro y los botones son lo que lo hace leerse como un iPhone y no
+    como un rectángulo negro alrededor de una captura.
     """
-    grosor = max(2, round(im.width * MARCO))
+    grosor = max(3, round(im.width * MARCO))
+    salto = max(2, round(grosor * 0.55))          # cuánto sobresalen los botones
     ancho, alto = im.width + grosor * 2, im.height + grosor * 2
     radio = round(im.width * 0.055) + grosor
 
-    cuerpo = Image.new('RGBA', (ancho, alto), (0, 0, 0, 0))
+    cuerpo = Image.new('RGBA', (ancho + salto * 2, alto), (0, 0, 0, 0))
     dib = ImageDraw.Draw(cuerpo)
-    dib.rounded_rectangle([0, 0, ancho - 1, alto - 1], radio, fill=CUERPO + (255,))
-    # Un filo más claro por dentro: sin él el cuerpo es una mancha negra y no
-    # se lee como metal.
-    dib.rounded_rectangle([1, 1, ancho - 2, alto - 2], radio - 1,
-                          outline=CANTO + (255,), width=max(1, round(grosor * 0.18)))
-    cuerpo.alpha_composite(im, (grosor, grosor))
+
+    # Primero los botones, para que el cuerpo se les pose encima y queden
+    # saliendo del canto en vez of pegados por fuera.
+    for lado, desde, hasta in BOTONES:
+        arriba, abajo = round(desde * alto), round(hasta * alto)
+        if lado == 'izq':
+            caja = [0, arriba, salto + grosor, abajo]
+        else:
+            caja = [ancho + salto - grosor, arriba, ancho + salto * 2 - 1, abajo]
+        dib.rounded_rectangle(caja, round(salto * 0.8), fill=BOTON + (255,))
+
+    izquierda = salto
+    dib.rounded_rectangle([izquierda, 0, izquierda + ancho - 1, alto - 1], radio, fill=RAIL + (255,))
+    # El bisel negro por dentro del canto: el canto es una línea de metal, no
+    # un marco entero, y eso es justo lo que distingue a un iPhone.
+    canto = max(2, round(grosor * 0.22))
+    dib.rounded_rectangle(
+        [izquierda + canto, canto, izquierda + ancho - 1 - canto, alto - 1 - canto],
+        radio - canto, fill=CUERPO + (255,))
+
+    cuerpo.alpha_composite(im, (izquierda + grosor, grosor))
     return cuerpo
 
 
@@ -192,17 +238,20 @@ def pantalla(captura, trozos=(), ancho_max=880, alto_max=1430):
     # reduce igual que el resto de la captura y no se nota el remiendo.
     if trozos:
         im = tapar(im, trozos)
-    # La isla se pinta sobre la captura grande y antes de reducir, para que sus
-    # bordes se suavicen igual que todo lo demás.
+    # Antes de reducir, para que todo se suavice igual que el resto.
+    im = sin_barra_de_estado(im)
     ImageDraw.Draw(im).rounded_rectangle(
         [round(ISLA[0] * im.width), round(ISLA[1] * im.height),
          round(ISLA[2] * im.width), round(ISLA[3] * im.height)],
         round((ISLA[3] - ISLA[1]) * im.height / 2), fill=(0, 0, 0))
 
-    # El marco ocupa sitio, así que la pantalla tiene que entrar algo más
-    # pequeña para que el conjunto siga cabiendo donde cabía.
-    hueco = 1 + 2 * MARCO
-    factor = min(ancho_max / (im.width * hueco), alto_max / (im.height * hueco))
+    # El marco ocupa sitio, así que la pantalla entra algo más pequeña para que
+    # el conjunto siga cabiendo donde cabía. A lo ancho suma el bisel de los
+    # dos lados más lo que sobresalen los botones; a lo alto, solo el bisel.
+    # Con un único margen para las dos medidas, el móvil encogía de más.
+    de_ancho = ancho_max / (im.width * (1 + 2 * MARCO + 1.1 * MARCO))
+    de_alto = alto_max / (im.height + 2 * MARCO * im.width)
+    factor = min(de_ancho, de_alto)
     im = im.resize((round(im.width * factor), round(im.height * factor)), Image.LANCZOS)
     radio = round(im.width * 0.055)
     mascara = Image.new('L', im.size, 0)
