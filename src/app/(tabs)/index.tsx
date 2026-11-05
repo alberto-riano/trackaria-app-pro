@@ -220,7 +220,14 @@ function cuantoLleva(minutos: number, compacta: boolean) {
 }
 
 /**
- * En rojo a partir de media hora, que es lo que duele.
+ * En ámbar a partir de media hora, que es lo que duele.
+ *
+ * Ámbar y no rojo porque en esta app el ámbar ya quiere decir «esto te
+ * espera» —es el color de la franja de estas mismas tarjetas— y el rojo está
+ * para lo que sale mal o lo que no tiene vuelta: el aspa de rechazar y los
+ * errores. Que alguien lleve dos horas esperando no es un error, es tu cola de
+ * trabajo, y pintarla de rojo gasta el único color que tenías para avisar de
+ * verdad.
  *
  * La versión corta es para la tarjeta de cita, que lleva tres botones al lado:
  * con la frase entera no cabía y se quedaba en «esperan…», que no dice nada.
@@ -231,9 +238,9 @@ function Espera({ desde, compacta = false }: { desde: string; compacta?: boolean
   const tarde = minutos >= 30;
   return (
     <View style={styles.espera}>
-      <Ionicons name="time-outline" size={14} color={tarde ? colors.danger : colors.faint} />
+      <Ionicons name="time-outline" size={14} color={tarde ? colors.warning : colors.faint} />
       <Text
-        style={[styles.esperaTexto, tarde && { color: colors.danger, fontWeight: '700' }]}
+        style={[styles.esperaTexto, tarde && { color: colors.warning, fontWeight: '700' }]}
         numberOfLines={1}>
         {cuantoLleva(minutos, compacta)}
       </Text>
