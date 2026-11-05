@@ -67,7 +67,7 @@ TITULARES = [
     ('Coge tú la conversación\ncuando haga falta', 'El WhatsApp del centro, con el relevo del bot'),
     ('Mira quién viene\nantes de abrir la sala', 'Y apunta a alguien con él delante'),
     ('Avisa a una clase\no a un horario', 'Y te dice a cuánta gente le va a llegar de verdad'),
-    ('Las citas de hoy,\nsin abrir el ordenador', 'Con su profesional y las que faltan por confirmar'),
+    ('Las citas del día,\nsin abrir el ordenador', 'Quién viene, a qué hora y con quién'),
     ('El día entero,\nclase a clase', 'Lo que está lleno y lo que todavía tiene hueco'),
     ('«¿Me queda bono?»,\ncontestado al momento', 'Sus clases, sus bonos y cuándo vuelve'),
 ]
