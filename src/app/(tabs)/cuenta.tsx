@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import {
   ActivityIndicator, Linking, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View,
 } from 'react-native';
@@ -20,10 +20,16 @@ import { colors, radius, space } from '@/lib/theme';
  * panel viendo las consecuencias, no de pie entre dos pacientes. Aquí se viene a
  * mirar «¿quién trabaja el jueves por la tarde?», que es la pregunta que te hace
  * un paciente delante.
+ *
+ * Por eso la gente va primero y el centro al final. La dirección y el horario
+ * del propio centro son lo único de esta pantalla que ya te sabes: nadie abre
+ * su app para enterarse de dónde trabaja. Estaban arriba del todo porque es lo
+ * primero que manda el servidor, que no es una razón.
  */
 export default function CuentaScreen() {
   const insets = useSafeAreaInsets();
   const { usuario, salir } = useSession();
+  const [verHorario, setVerHorario] = useState(false);
   const { datos, error, refrescando, refrescar } = useDatos(
     useCallback((token: string) => endpoints.centro(token), []),
   );
@@ -62,23 +68,6 @@ export default function CuentaScreen() {
         <ActivityIndicator color={colors.brand} style={styles.cargando} />
       ) : (
         <>
-          <Card style={styles.bloqueCaja}>
-            {centro.direccion ? (
-              <Dato icono="location-outline" texto={centro.direccion} />
-            ) : null}
-            {centro.telefono ? <Dato icono="call-outline" texto={centro.telefono} /> : null}
-            <Horario dias={centro.horario} vacio="Sin horario guardado." />
-            {centro.maps_url ? (
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => Linking.openURL(centro.maps_url)}
-                style={({ pressed }) => [styles.enlace, pressed && { opacity: 0.7 }]}>
-                <Ionicons name="navigate-outline" size={16} color={colors.brandDark} />
-                <Text style={styles.enlaceTexto}>Cómo llegar</Text>
-              </Pressable>
-            ) : null}
-          </Card>
-
           {hayClases && instructores ? (
             <Bloque titulo={instructores.length === 1 ? 'Instructor' : 'Instructores'}>
               {instructores.length === 0 ? (
@@ -192,6 +181,40 @@ export default function CuentaScreen() {
               ))}
             </Bloque>
           ) : null}
+
+          <Bloque titulo="El centro">
+            {centro.direccion ? (
+              <Dato icono="location-outline" texto={centro.direccion} />
+            ) : null}
+            {centro.telefono ? <Dato icono="call-outline" texto={centro.telefono} /> : null}
+            {centro.maps_url ? (
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => Linking.openURL(centro.maps_url)}
+                style={({ pressed }) => [styles.enlace, pressed && { opacity: 0.7 }]}>
+                <Ionicons name="navigate-outline" size={16} color={colors.brandDark} />
+                <Text style={styles.enlaceTexto}>Cómo llegar</Text>
+              </Pressable>
+            ) : null}
+            {/* El horario del centro son siete renglones que casi nunca se
+                miran: lo que se consulta es el de una persona, y ese está en
+                su ficha. Detrás de un toque para quien lo busque. */}
+            <Pressable
+              accessibilityRole="button"
+              accessibilityState={{ expanded: verHorario }}
+              onPress={() => setVerHorario(!verHorario)}
+              style={({ pressed }) => [styles.enlace, pressed && { opacity: 0.7 }]}>
+              <Ionicons
+                name={verHorario ? 'chevron-up' : 'chevron-down'}
+                size={16}
+                color={colors.brandDark}
+              />
+              <Text style={styles.enlaceTexto}>
+                {verHorario ? 'Ocultar el horario' : 'Ver el horario del centro'}
+              </Text>
+            </Pressable>
+            {verHorario ? <Horario dias={centro.horario} vacio="Sin horario guardado." /> : null}
+          </Bloque>
         </>
       )}
 

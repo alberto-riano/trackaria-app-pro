@@ -39,10 +39,16 @@ CREMA = (244, 239, 227)
 TINTA = (12, 31, 49)
 ORO = (191, 143, 51)
 
-# Lo que ocupa la marca dentro de cada lienzo. Son los dos números que ya tenían
-# los iconos buenos: el de iOS va a sangre y el de Android tiene que caber en la
-# zona segura, porque el lanzador recorta el icono a un círculo.
-PARTE_IOS = 0.613
+# Lo que ocupa la marca dentro de cada lienzo.
+#
+# El de iOS va a sangre: el sistema ya lo redondea, y la marca es casi cuadrada
+# y va centrada, así que a 0,70 sus esquinas siguen cayendo dentro del
+# redondeo. A 0,613 se veía pequeña entre tanto margen.
+#
+# El de Android no se escala: las máscaras ya vienen a su tamaño, que es
+# justamente este, y tiene que caber en la zona segura porque el lanzador
+# recorta el icono a un círculo.
+PARTE_IOS = 0.70
 PARTE_ANDROID = 0.460
 
 LADO = 1024
@@ -95,9 +101,13 @@ def icono_ios():
 def primer_plano():
     """El primer plano de Android: la marca sola, sobre nada."""
     trazo, acento = mascaras()
+    # Se escala igual que el de iOS aunque el factor salga 1: así PARTE_ANDROID
+    # manda de verdad. Antes era un número que no hacía nada, y tocarlo para
+    # agrandar el icono de Android no habría cambiado una coma.
+    factor = factor_para(trazo, acento, PARTE_ANDROID)
     img = Image.new('RGBA', (LADO, LADO), (0, 0, 0, 0))
-    pintar(img, trazo, TINTA)
-    pintar(img, acento, ORO)
+    pintar(img, escalar(trazo, factor), TINTA)
+    pintar(img, escalar(acento, factor), ORO)
     return img
 
 
