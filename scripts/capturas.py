@@ -168,19 +168,31 @@ ISLA = (0.3576, 0.0143, 0.6424, 0.0527)
 BARRA = 0.052
 MUESTRA = 0.056
 
-# El marco. Grueso en fracciones del ancho de la pantalla.
-MARCO = 0.034
-CUERPO = (26, 26, 28)      # el negro del bisel
-RAIL = (154, 152, 158)     # el titanio del canto
-BOTON = (120, 118, 124)
+# El marco. Todo en fracciones del ancho de la pantalla, menos lo que se dice.
+#
+# El radio es lo que más hace que se lea como un iPhone: las esquinas de uno de
+# verdad son enormes —unos 60 pt sobre 440 de ancho— y con un redondeo pequeño
+# el conjunto parece un marco de fotos.
+MARCO = 0.030
+RADIO = 0.118
+CUERPO = (22, 22, 24)      # el negro del bisel
+# El canto no es gris plano: es metal, y el metal se ve porque coge más luz en
+# los filos que en el medio. Tres paradas de arriba abajo bastan para eso.
+RAIL = ((198, 196, 202), (116, 114, 122), (198, 196, 202))
+BOTON = (138, 136, 144)
 
 # Los botones, en fracciones del alto del móvil: (lado, desde, hasta).
 BOTONES = [
-    ('izq', 0.150, 0.190),   # el de acción
-    ('izq', 0.225, 0.300),   # subir volumen
-    ('izq', 0.315, 0.390),   # bajar volumen
-    ('der', 0.235, 0.345),   # encendido
+    ('izq', 0.150, 0.192),   # el de acción
+    ('izq', 0.228, 0.302),   # subir volumen
+    ('izq', 0.318, 0.392),   # bajar volumen
+    ('der', 0.238, 0.348),   # encendido
 ]
+
+# La barrita de inicio. Las capturas no la traen —la dibuja el sistema por
+# encima de todo y no entra en el PNG—, y es de las cosas que más dicen
+# «iPhone» sin que nadie se pare a mirarla.
+INICIO = (0.316, 0.0052, 0.0084)   # ancho, alto y separación del borde
 
 
 def sin_barra_de_estado(im):
@@ -192,38 +204,57 @@ def sin_barra_de_estado(im):
     return im
 
 
-def enmarcar(im):
-    """Mete la pantalla en un cuerpo de iPhone, con su canto y sus botones.
+def barrita_de_inicio(im):
+    ancho = round(INICIO[0] * im.width)
+    alto = max(3, round(INICIO[1] * im.height))
+    abajo = im.height - round(INICIO[2] * im.height)
+    izquierda = (im.width - ancho) // 2
+    ImageDraw.Draw(im).rounded_rectangle(
+        [izquierda, abajo - alto, izquierda + ancho, abajo], alto // 2, fill=(24, 24, 28))
+    return im
 
-    El marco no es adorno: es lo que le da un borde cuando el fondo del lienzo
-    y el de la app son del mismo color y la pantalla se funde con el papel. Y
-    el canto claro y los botones son lo que lo hace leerse como un iPhone y no
-    como un rectángulo negro alrededor de una captura.
-    """
+
+def _metal(ancho, alto):
+    """Una tira de titanio: clara en los filos y más oscura por el medio."""
+    tira = Image.new('RGB', (1, alto))
+    pintor = tira.load()
+    for y in range(alto):
+        parte = y / max(1, alto - 1)
+        if parte < 0.5:
+            a, b, mezcla = RAIL[0], RAIL[1], parte * 2
+        else:
+            a, b, mezcla = RAIL[1], RAIL[2], (parte - 0.5) * 2
+        pintor[0, y] = tuple(round(a[i] + (b[i] - a[i]) * mezcla) for i in range(3))
+    return tira.resize((ancho, alto), Image.BILINEAR).convert('RGBA')
+
+
+def enmarcar(im):
+    """Mete la pantalla en un cuerpo de iPhone, con su canto y sus botones."""
     grosor = max(3, round(im.width * MARCO))
     salto = max(2, round(grosor * 0.55))          # cuánto sobresalen los botones
     ancho, alto = im.width + grosor * 2, im.height + grosor * 2
-    radio = round(im.width * 0.055) + grosor
+    radio = round(im.width * RADIO) + grosor
 
     cuerpo = Image.new('RGBA', (ancho + salto * 2, alto), (0, 0, 0, 0))
     dib = ImageDraw.Draw(cuerpo)
 
     # Primero los botones, para que el cuerpo se les pose encima y queden
-    # saliendo del canto en vez of pegados por fuera.
+    # saliendo del canto en vez de pegados por fuera.
     for lado, desde, hasta in BOTONES:
         arriba, abajo = round(desde * alto), round(hasta * alto)
-        if lado == 'izq':
-            caja = [0, arriba, salto + grosor, abajo]
-        else:
-            caja = [ancho + salto - grosor, arriba, ancho + salto * 2 - 1, abajo]
+        caja = ([0, arriba, salto + grosor, abajo] if lado == 'izq'
+                else [ancho + salto - grosor, arriba, ancho + salto * 2 - 1, abajo])
         dib.rounded_rectangle(caja, round(salto * 0.8), fill=BOTON + (255,))
 
     izquierda = salto
-    dib.rounded_rectangle([izquierda, 0, izquierda + ancho - 1, alto - 1], radio, fill=RAIL + (255,))
+    mascara = Image.new('L', (ancho, alto), 0)
+    ImageDraw.Draw(mascara).rounded_rectangle([0, 0, ancho - 1, alto - 1], radio, fill=255)
+    cuerpo.paste(_metal(ancho, alto), (izquierda, 0), mascara)
+
     # El bisel negro por dentro del canto: el canto es una línea de metal, no
     # un marco entero, y eso es justo lo que distingue a un iPhone.
-    canto = max(2, round(grosor * 0.22))
-    dib.rounded_rectangle(
+    canto = max(2, round(grosor * 0.26))
+    ImageDraw.Draw(cuerpo).rounded_rectangle(
         [izquierda + canto, canto, izquierda + ancho - 1 - canto, alto - 1 - canto],
         radio - canto, fill=CUERPO + (255,))
 
@@ -253,11 +284,11 @@ def pantalla(captura, trozos=(), ancho_max=880, alto_max=1430):
     de_alto = alto_max / (im.height + 2 * MARCO * im.width)
     factor = min(de_ancho, de_alto)
     im = im.resize((round(im.width * factor), round(im.height * factor)), Image.LANCZOS)
-    radio = round(im.width * 0.055)
+    radio = round(im.width * RADIO)
     mascara = Image.new('L', im.size, 0)
     ImageDraw.Draw(mascara).rounded_rectangle([0, 0, im.width - 1, im.height - 1], radio, fill=255)
     salida = Image.new('RGBA', im.size, (0, 0, 0, 0))
-    salida.paste(im, (0, 0), mascara)
+    salida.paste(barrita_de_inicio(im), (0, 0), mascara)
     return enmarcar(salida)
 
 
