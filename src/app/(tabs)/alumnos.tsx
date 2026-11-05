@@ -43,15 +43,29 @@ export default function AlumnosScreen() {
           titulo="Alumnos"
           coletilla={usuario?.centro.nombre}
           accion={
-            // Aquí y no en Clases: un aviso va a personas, no a un día, y en
-            // una cabecera llamada «Alumnos» el megáfono se adivina solo.
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Avisar a tus alumnos"
-              onPress={() => setAvisando(true)}
-              style={({ pressed }) => [styles.boton, pressed && { opacity: 0.7 }]}>
-              <Ionicons name="megaphone-outline" size={20} color={colors.brandDark} />
-            </Pressable>
+            <View style={styles.acciones}>
+              {/* Dar de alta también está al final de la lista, que es donde
+                  cae quien ha buscado a alguien y ha visto que no está. Aquí
+                  arriba es para el caso contrario: alguien delante del
+                  mostrador al que hay que apuntar sin buscar nada antes, y
+                  con la lista larga el botón de abajo queda a varios dedos. */}
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Dar de alta a alguien nuevo"
+                onPress={() => setDandoDeAlta(true)}
+                style={({ pressed }) => [styles.boton, pressed && { opacity: 0.7 }]}>
+                <Ionicons name="person-add-outline" size={19} color={colors.brandDark} />
+              </Pressable>
+              {/* Aquí y no en Clases: un aviso va a personas, no a un día, y en
+                  una cabecera llamada «Alumnos» el megáfono se adivina solo. */}
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Avisar a tus alumnos"
+                onPress={() => setAvisando(true)}
+                style={({ pressed }) => [styles.boton, pressed && { opacity: 0.7 }]}>
+                <Ionicons name="megaphone-outline" size={20} color={colors.brandDark} />
+              </Pressable>
+            </View>
           }
         />
 
@@ -139,6 +153,7 @@ export default function AlumnosScreen() {
 
 const styles = StyleSheet.create({
   cabecera: { paddingHorizontal: space.lg, backgroundColor: colors.background },
+  acciones: { flexDirection: 'row', gap: space.sm },
   contenido: { padding: space.lg, paddingTop: space.md, paddingBottom: space.xxl },
   cargando: { marginTop: space.xxl },
   buscador: {

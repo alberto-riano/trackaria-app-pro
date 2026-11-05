@@ -296,6 +296,14 @@ export type AvisoEnviado = {
 
 export type HorarioSuyo = {
   id: string;
+  /**
+   * La clase concreta a la que lleva esta fila, o vacío si no hay ninguna.
+   *
+   * `id` es el del horario semanal y no se puede abrir: «todos los martes» no
+   * es un día. Esto es la primera que viene, que es a la que se quiere entrar
+   * mirando el cuadrante.
+   */
+  proxima?: string;
   nombre: string;
   color: string;
   imagen?: string;

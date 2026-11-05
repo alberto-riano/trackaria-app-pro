@@ -95,7 +95,20 @@ export default function InstructorScreen() {
                 <View key={dia.dia} style={[styles.dia, orden > 0 && styles.diaSeparado]}>
                   <Text style={styles.diaNombre}>{dia.dia.toUpperCase()}</Text>
                   {dia.clases.map((clase) => (
-                    <View key={clase.id} style={styles.deLaSemana}>
+                    // El cuadrante se mira para acabar entrando en una: «el
+                    // martes que viene, ¿cuántos hay apuntados?». La fila lleva
+                    // a la primera que viene de ese horario. Cuando no hay
+                    // ninguna —todo el mes cerrado, por ejemplo— no es pulsable
+                    // en vez de llevar a una pantalla vacía.
+                    <Pressable
+                      key={clase.id}
+                      accessibilityRole={clase.proxima ? 'button' : undefined}
+                      accessibilityLabel={clase.proxima
+                        ? `Abrir la próxima clase de ${clase.nombre}`
+                        : undefined}
+                      disabled={!clase.proxima}
+                      onPress={() => router.push(`/clase/${clase.proxima}`)}
+                      style={({ pressed }) => [styles.deLaSemana, pressed && { opacity: 0.7 }]}>
                       <Text style={styles.semanaHora} numberOfLines={1}>{clase.hora}</Text>
                       <Insignia
                         nombre={clase.nombre}
@@ -111,7 +124,10 @@ export default function InstructorScreen() {
                           <Text style={styles.semanaSala} numberOfLines={1}>{clase.sala}</Text>
                         ) : null}
                       </View>
-                    </View>
+                      {clase.proxima ? (
+                        <Ionicons name="chevron-forward" size={16} color={colors.faint} />
+                      ) : null}
+                    </Pressable>
                   ))}
                 </View>
               ))

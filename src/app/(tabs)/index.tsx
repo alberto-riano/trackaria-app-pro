@@ -117,7 +117,7 @@ function PendienteScreen() {
       ) : (
         <>
           <Text style={styles.resumen}>
-            {cola.length === 1 ? '1 cosa espera tu respuesta' : `${cola.length} cosas esperan tu respuesta`}
+            {cola.length === 1 ? '1 asunto espera tu respuesta' : `${cola.length} asuntos esperan tu respuesta`}
           </Text>
 
           {/* Las dos cosas van separadas y en este orden a propósito. Una
