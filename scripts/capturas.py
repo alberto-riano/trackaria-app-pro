@@ -89,10 +89,10 @@ SISTEMA = '/System/Library/Fonts/SFNS.ttf'
 
 TAPADOS = {
     4: [  # el teléfono que asoma detrás de la hoja del aviso
-        {'caja': (0.1922, 0.2930, 0.4506, 0.3040)},
+        {'caja': (0.1900, 0.2880, 0.4790, 0.3125)},
     ],
     7: [  # el teléfono de la ficha del alumno
-        {'caja': (0.3659, 0.2615, 0.6764, 0.2750), 'texto': '+34600000000',
+        {'caja': (0.3636, 0.2615, 0.6800, 0.2755), 'texto': '+34600000000',
          'tinta': (11, 91, 85), 'fondo': (255, 255, 255), 'peso': 'Semibold'},
     ],
 }
