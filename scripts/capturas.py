@@ -90,7 +90,16 @@ def un_solo_tono(fondo):
     return papel
 
 
-def lienzo(ancho, alto):
+# Por dónde se recorta el fondo cuando sobra ancho: 0,5 es por el centro y 1
+# es pegado a la derecha.
+#
+# Los dos van centrados. Está aquí porque el lienzo de Apple es bastante más
+# estrecho de proporción que el fondo y hay que quitarle ancho, así que si
+# algún día entra un dibujo que no aguante el recorte, se mueve desde aquí.
+SESGO = {'play': 0.5, 'apple': 0.5}
+
+
+def lienzo(ancho, alto, tienda='play'):
     """El papel sobre el que va la pieza.
 
     Con el fondo ilustrado se recorta por el centro y no se deforma: es un
@@ -99,12 +108,17 @@ def lienzo(ancho, alto):
     """
     if not FONDOS.exists():
         return Image.new('RGBA', (ancho, alto), CREMA + (255,))
-    fondo = un_solo_tono(Image.open(FONDOS).convert('RGB'))
+    fondo = Image.open(FONDOS).convert('RGB')
     factor = max(ancho / fondo.width, alto / fondo.height)
     fondo = fondo.resize((round(fondo.width * factor), round(fondo.height * factor)), Image.LANCZOS)
-    izquierda = (fondo.width - ancho) // 2
+    izquierda = round((fondo.width - ancho) * SESGO.get(tienda, 0.5))
     arriba = (fondo.height - alto) // 2
-    papel = fondo.crop((izquierda, arriba, izquierda + ancho, arriba + alto)).convert('RGBA')
+    # El tono se iguala ya al tamaño final y no antes de agrandar. El fondo
+    # viene a 768 de ancho y hay que subirlo a 1080 o a 1320, y agrandar
+    # emborrona: la curva aplicada después recupera el filo del trazo en vez de
+    # estirar uno que ya venía blando.
+    papel = un_solo_tono(fondo.crop(
+        (izquierda, arriba, izquierda + ancho, arriba + alto))).convert('RGBA')
 
     # Un velo de crema por encima. Los dibujos son decoración: a toda potencia
     # compiten con la captura, que es lo único que de verdad hay que mirar.
@@ -381,7 +395,7 @@ def pieza(captura, titular, pie, trozos=(), tienda='play'):
     ancho, alto = TIENDAS[tienda]
     escala = ancho / BASE
 
-    papel = lienzo(ancho, alto)
+    papel = lienzo(ancho, alto, tienda)
     dib = ImageDraw.Draw(papel)
 
     y = centrado(dib, titular, fuente(NEGRITA, round(76 * escala)), round(118 * escala), TINTA, ancho)
@@ -450,7 +464,7 @@ def main():
             if not origen.exists():
                 continue
             destino = salida / f'{i:02d}.png'
-            pieza(origen, titular, pie, TAPADOS.get(i, ()), tienda).save(destino)
+            pieza(origen, titular, pie, TAPADOS.get(i, ()), tienda).save(destino, optimize=True)
             print(f'{destino}  {ancho}×{alto}')
             if tienda == 'play':
                 hechas += 1
