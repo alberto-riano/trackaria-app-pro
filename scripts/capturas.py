@@ -50,6 +50,81 @@ NORMAL = '/System/Library/Fonts/Supplemental/Arial.ttf'
 # Cada tienda pide lo suyo y no se puede reutilizar una pieza en la otra: Play
 # no admite nada más alargado que 9:16, y Apple exige el tamaño exacto de un
 # iPhone grande. Son las mismas capturas con otro lienzo.
+# El fondo ilustrado del lienzo, si lo hay. Sin él, el crema liso de siempre.
+FONDOS = RAIZ / 'assets' / 'store' / 'fondos' / 'ficha.png'
+
+
+# El tono único de los dibujos del fondo.
+TRAZO = (199, 181, 152)
+
+
+def un_solo_tono(fondo):
+    """Repinta los dibujos en un único color, conservando la fuerza del trazo.
+
+    El fondo viene con piezas que no casan entre sí: unas de línea fina, otras
+    rellenas, y algún garabato mucho más oscuro que el resto. Igualar el grosor
+    de un dibujo ya rasterizado no se puede, pero el color sí, y es lo que más
+    se nota: con un solo tono el conjunto se lee como una familia aunque los
+    trazos no midan lo mismo.
+
+    Se mide cuánta tinta hay en cada píxel —lo que se aparta del crema— y se
+    usa como transparencia del tono nuevo. Así una línea fina sigue siendo fina
+    y un relleno sigue siendo relleno.
+
+    Y además se levantan los trazos flojos. El fondo trae unos dibujos mucho
+    más claros que otros —los de arriba casi no se ven—, y copiar la fuerza tal
+    cual conserva esa diferencia. La curva sube lo tenue sin tocar lo que ya
+    era fuerte, que es lo que los pone a todos en la misma familia.
+
+    El suelo está para que el papel no suba con ellos: el crema del fondo no es
+    plano del todo y, sin cortar por abajo, su grano se convertiría en manchas.
+    """
+    gris = fondo.convert('L')
+    claro = max(gris.getextrema()[1], 1)
+    tinta = gris.point(lambda v: max(0, min(255, round((claro - v) * 255 / max(1, claro - 60)))))
+    suelo, curva = 20, 0.55
+    tinta = tinta.point(
+        lambda v: 0 if v <= suelo else round(255 * (((v - suelo) / (255 - suelo)) ** curva)))
+    papel = Image.new('RGB', fondo.size, CREMA)
+    papel.paste(Image.new('RGB', fondo.size, TRAZO), (0, 0), tinta)
+    return papel
+
+
+def lienzo(ancho, alto):
+    """El papel sobre el que va la pieza.
+
+    Con el fondo ilustrado se recorta por el centro y no se deforma: es un
+    marco de dibujos alrededor de un hueco, y estirarlo metería los dibujos
+    donde va el móvil, que es justo lo que el hueco evita.
+    """
+    if not FONDOS.exists():
+        return Image.new('RGBA', (ancho, alto), CREMA + (255,))
+    fondo = un_solo_tono(Image.open(FONDOS).convert('RGB'))
+    factor = max(ancho / fondo.width, alto / fondo.height)
+    fondo = fondo.resize((round(fondo.width * factor), round(fondo.height * factor)), Image.LANCZOS)
+    izquierda = (fondo.width - ancho) // 2
+    arriba = (fondo.height - alto) // 2
+    papel = fondo.crop((izquierda, arriba, izquierda + ancho, arriba + alto)).convert('RGBA')
+
+    # Un velo de crema por encima. Los dibujos son decoración: a toda potencia
+    # compiten con la captura, que es lo único que de verdad hay que mirar.
+    papel.alpha_composite(Image.new('RGBA', (ancho, alto), CREMA + (30,)))
+
+    # Y más opaco arriba, donde va el titular. Un titular sobre una campana y
+    # un calendario no se lee, por grande que sea.
+    velo = Image.new('RGBA', (ancho, alto), CREMA + (0,))
+    tapa = round(alto * 0.30)
+    tira = Image.new('L', (1, tapa))
+    pintor = tira.load()
+    for y in range(tapa):
+        pintor[0, y] = round(235 * (1 - (y / tapa) ** 1.6))
+    velo.putalpha(Image.new('L', (ancho, alto), 0))
+    velo.paste(Image.new('RGBA', (ancho, tapa), CREMA + (255,)),
+               (0, 0), tira.resize((ancho, tapa), Image.BILINEAR))
+    papel.alpha_composite(velo)
+    return papel
+
+
 TIENDAS = {
     'play': (1080, 1920),
     'apple': (1320, 2868),
@@ -173,9 +248,9 @@ MUESTRA = 0.056
 # El radio es lo que más hace que se lea como un iPhone: las esquinas de uno de
 # verdad son enormes —unos 60 pt sobre 440 de ancho— y con un redondeo pequeño
 # el conjunto parece un marco de fotos.
-MARCO = 0.030
+MARCO = 0.050
 RADIO = 0.118
-CUERPO = (22, 22, 24)      # el negro del bisel
+CUERPO = (18, 18, 20)      # el negro del bisel
 # El canto no es gris plano: es metal, y el metal se ve porque coge más luz en
 # los filos que en el medio. Tres paradas de arriba abajo bastan para eso.
 RAIL = ((198, 196, 202), (116, 114, 122), (198, 196, 202))
@@ -231,7 +306,7 @@ def _metal(ancho, alto):
 def enmarcar(im):
     """Mete la pantalla en un cuerpo de iPhone, con su canto y sus botones."""
     grosor = max(3, round(im.width * MARCO))
-    salto = max(2, round(grosor * 0.55))          # cuánto sobresalen los botones
+    salto = max(2, round(grosor * 0.26))          # cuánto sobresalen los botones
     ancho, alto = im.width + grosor * 2, im.height + grosor * 2
     radio = round(im.width * RADIO) + grosor
 
@@ -296,7 +371,7 @@ def con_sombra(lienzo, im, donde, escala=1.0):
     """Pega la pantalla con una sombra suave: sin ella flota sobre el crema."""
     sombra = Image.new('RGBA', lienzo.size, (0, 0, 0, 0))
     hueco = Image.new('RGBA', im.size, (12, 31, 49, 70))
-    hueco.putalpha(im.split()[3].point(lambda v: round(v * 0.28)))
+    hueco.putalpha(im.split()[3].point(lambda v: round(v * 0.45)))
     sombra.paste(hueco, (donde[0], donde[1] + round(18 * escala)), hueco)
     lienzo.alpha_composite(sombra.filter(ImageFilter.GaussianBlur(26 * escala)))
     lienzo.alpha_composite(im.convert('RGBA'), donde)
@@ -306,8 +381,8 @@ def pieza(captura, titular, pie, trozos=(), tienda='play'):
     ancho, alto = TIENDAS[tienda]
     escala = ancho / BASE
 
-    lienzo = Image.new('RGBA', (ancho, alto), CREMA + (255,))
-    dib = ImageDraw.Draw(lienzo)
+    papel = lienzo(ancho, alto)
+    dib = ImageDraw.Draw(papel)
 
     y = centrado(dib, titular, fuente(NEGRITA, round(76 * escala)), round(118 * escala), TINTA, ancho)
     y = centrado(dib, pie, fuente(NORMAL, round(36 * escala)), y + round(22 * escala), APAGADO, ancho)
@@ -324,9 +399,9 @@ def pieza(captura, titular, pie, trozos=(), tienda='play'):
     # de que la app te avisa sola de que hay algo esperándote.
     arriba = max(y + round(96 * escala), round(430 * escala))
     im = pantalla(captura, trozos,
-                  ancho_max=round(880 * escala), alto_max=alto - arriba - round(56 * escala))
-    con_sombra(lienzo, im, ((ancho - im.width) // 2, arriba), escala)
-    return lienzo.convert('RGB')
+                  ancho_max=round(800 * escala), alto_max=alto - arriba - round(120 * escala))
+    con_sombra(papel, im, ((ancho - im.width) // 2, arriba), escala)
+    return papel.convert('RGB')
 
 
 def grafico_destacado():
