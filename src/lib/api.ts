@@ -405,6 +405,14 @@ export const endpoints = {
       token,
       body: { clases, nombre, ...(clase ? { clase } : {}) },
     }),
+  ajustarBono: (token: string, id: string, clases: number, motivo: string) =>
+    api<{ bono: Bono; alumno: Alumno }>(`/bonos/${id}/ajustar/`, {
+      method: 'POST',
+      token,
+      body: { clases, motivo },
+    }),
+  desactivarBono: (token: string, id: string) =>
+    api<{ alumno: Alumno }>(`/bonos/${id}/desactivar/`, { method: 'POST', token }),
   tiposDeClase: (token: string) => api<{ tipos: TipoDeClase[] }>('/clases/tipos/', { token }),
   instructor: (token: string, id: string) =>
     api<{ instructor: Instructor }>(`/instructores/${id}/`, { token }),

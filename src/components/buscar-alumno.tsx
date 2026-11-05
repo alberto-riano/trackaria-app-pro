@@ -1,5 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View,
 } from 'react-native';
@@ -160,20 +160,16 @@ export function AltaDeAlumno({
   const [guardando, setGuardando] = useState(false);
   const [fallo, setFallo] = useState('');
 
-  // El foco se pone cuando la hoja ya ha terminado de subir, y no al montarse.
+  // Aquí no se enfoca nada solo, y es a propósito.
   //
-  // Con `autoFocus` el teclado salía mientras la hoja seguía deslizándose: el
-  // contenedor que la aparta del teclado le cambiaba el alto a mitad de la
-  // animación, las dos cosas se peleaban y la hoja se quedaba a medias, sin
-  // llegar al botón de guardar. Desde la lista casi no se notaba porque el
-  // teclado ya estaba abierto de buscar; abriéndola desde la cabecera, con el
-  // teclado cerrado, pasaba siempre.
-  const campoNombre = useRef<TextInput>(null);
-  useEffect(() => {
-    if (parecePhone) return;
-    const cuando = setTimeout(() => campoNombre.current?.focus(), 350);
-    return () => clearTimeout(cuando);
-  }, [parecePhone]);
+  // La hoja está pegada al borde de abajo, así que en cuanto sale el teclado
+  // tiene que subir: eso no se puede evitar, es dónde está. Lo que sí se evita
+  // es que suba sin que nadie se lo haya pedido. Con el foco automático la
+  // hoja aparecía abajo y acto seguido daba un salto hacia arriba ella sola; y
+  // cuando el teclado salía con la hoja todavía deslizándose, las dos cosas se
+  // peleaban por el mismo alto y se quedaba a medias, sin llegar al botón de
+  // guardar. Ahora la hoja aparece quieta y sube cuando tocas el campo, que es
+  // cuando ya lo esperas porque lo has pedido tú.
 
   const listo = nombre.trim().length > 0 && telefono.trim().length >= 6;
 
@@ -227,7 +223,6 @@ export function AltaDeAlumno({
           onChangeText={setNombre}
           placeholder="Como le llames"
           placeholderTextColor={colors.faint}
-          ref={campoNombre}
           style={styles.campoAlto}
           autoCapitalize="words"
           autoCorrect={false}

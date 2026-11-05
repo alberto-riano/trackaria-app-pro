@@ -3,6 +3,7 @@ import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { AjustarBono } from '@/components/ajustar-bono';
 import { DarBono } from '@/components/dar-bono';
 import { Avatar, Boton, Card } from '@/components/ui';
 import { endpoints, type Alumno, type Bono, type ClaseSuya } from '@/lib/api';
@@ -33,6 +34,7 @@ export default function AlumnoScreen() {
   const [recien, setRecien] = useState<Alumno | null>(null);
   const alumno = recien ?? datos?.alumno ?? null;
   const [dandoBono, setDandoBono] = useState(false);
+  const [ajustando, setAjustando] = useState<Bono | null>(null);
 
   const hayBonos = usuario?.centro.bonos !== false;
   const clasesDeBono = (alumno?.bonos ?? []).reduce((suma, bono) => suma + bono.quedan, 0);
@@ -88,7 +90,9 @@ export default function AlumnoScreen() {
 
             {alumno.bonos.length > 0 ? (
               <Bloque titulo="Sus bonos">
-                {alumno.bonos.map((bono) => <FilaDeBono key={bono.id} bono={bono} />)}
+                {alumno.bonos.map((bono) => (
+                  <FilaDeBono key={bono.id} bono={bono} onPress={() => setAjustando(bono)} />
+                ))}
               </Bloque>
             ) : null}
 
@@ -133,23 +137,38 @@ export default function AlumnoScreen() {
       </ScrollView>
 
       {alumno ? (
-        <DarBono
-          visible={dandoBono}
-          alumno={alumno}
-          onClose={() => setDandoBono(false)}
-          onDado={(actualizado) => { setRecien(actualizado); recargar(); }}
-        />
+        <>
+          <DarBono
+            visible={dandoBono}
+            alumno={alumno}
+            onClose={() => setDandoBono(false)}
+            onDado={(actualizado) => { setRecien(actualizado); recargar(); }}
+          />
+          <AjustarBono
+            bono={ajustando}
+            alumno={alumno}
+            onClose={() => setAjustando(null)}
+            onCambiado={(actualizado) => { setRecien(actualizado); recargar(); }}
+          />
+        </>
       ) : null}
     </>
   );
 }
 
-function FilaDeBono({ bono }: { bono: Bono }) {
+function FilaDeBono({ bono, onPress }: { bono: Bono; onPress: () => void }) {
   const gastadas = Math.max(0, bono.total - bono.quedan);
   const parte = bono.total > 0 ? Math.min(1, gastadas / bono.total) : 0;
   const agotado = bono.quedan <= 0;
   return (
-    <View style={styles.bono}>
+    // Se abre para arreglarlo: «me cobraste una de más» se dice aquí, delante
+    // del número que no cuadra, y antes había que acordarse de ello por la
+    // noche con el panel abierto.
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`Ajustar ${bono.nombre}`}
+      onPress={onPress}
+      style={({ pressed }) => [styles.bono, pressed && { opacity: 0.7 }]}>
       <View style={styles.bonoFila}>
         <View style={styles.filaTexto}>
           <Text style={styles.filaTitulo} numberOfLines={1}>{bono.nombre}</Text>
@@ -160,6 +179,7 @@ function FilaDeBono({ bono }: { bono: Bono }) {
         <Text style={[styles.bonoCuenta, agotado && { color: colors.faint }]}>
           {agotado ? 'Gastado' : `${bono.quedan} de ${bono.total}`}
         </Text>
+        <Ionicons name="chevron-forward" size={16} color={colors.faint} />
       </View>
       {/* La barra cuenta lo gastado, no lo que queda: lo que se mira de reojo
           es cuánto le falta para tener que comprar otro. */}
@@ -171,7 +191,7 @@ function FilaDeBono({ bono }: { bono: Bono }) {
           ]}
         />
       </View>
-    </View>
+    </Pressable>
   );
 }
 
