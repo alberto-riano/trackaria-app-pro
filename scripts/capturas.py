@@ -13,8 +13,15 @@ Cómo se usa:
    orden de TITULARES.
 3. `python3 scripts/capturas.py`
 
-Deja en esa misma carpeta un `play/` con todo listo para subir. El gráfico
-destacado no necesita capturas y se genera siempre.
+Deja en esa misma carpeta un `play/` y un `apple/` con todo listo para subir.
+Cada tienda pide lo suyo y una pieza no sirve para la otra: Play no admite nada
+más alargado que 9:16 y Apple exige el tamaño exacto de un iPhone grande. El
+gráfico destacado es solo de Play y se genera siempre.
+
+Las capturas en crudo tienen que venir del iPhone sin pasar por nada que las
+comprima —ni WhatsApp ni Telegram—: las de Apple son casi un 50 % más grandes
+que las de Play, y una captura pequeña hay que agrandarla y se nota. El script
+avisa cuando le pasa.
 
 Las capturas en crudo viven en el repo a propósito: son lo único que no se
 puede rehacer solo, porque hacen falta un móvil y un centro con datos. Con
@@ -40,7 +47,18 @@ APAGADO = (122, 125, 118)
 NEGRITA = '/System/Library/Fonts/Supplemental/Arial Bold.ttf'
 NORMAL = '/System/Library/Fonts/Supplemental/Arial.ttf'
 
-ANCHO, ALTO = 1080, 1920
+# Cada tienda pide lo suyo y no se puede reutilizar una pieza en la otra: Play
+# no admite nada más alargado que 9:16, y Apple exige el tamaño exacto de un
+# iPhone grande. Son las mismas capturas con otro lienzo.
+TIENDAS = {
+    'play': (1080, 1920),
+    'apple': (1320, 2868),
+}
+
+# El tamaño con el que están pensadas las letras y los márgenes. Lo demás se
+# escala a partir de aquí, para que una pieza de Apple no salga con el titular
+# de un lienzo más estrecho.
+BASE = 1080
 
 # El orden importa: en Play casi nadie pasa de la tercera. Las tres primeras
 # tienen que contar, por sí solas, para quién es la app y qué resuelve.
@@ -83,12 +101,12 @@ def fuente(ruta, tamano):
     return ImageFont.truetype(ruta, tamano)
 
 
-def centrado(dib, texto, fuente_, y, color, interlineado=1.18):
+def centrado(dib, texto, fuente_, y, color, ancho, interlineado=1.18):
     """Escribe un texto centrado, línea a línea, y devuelve dónde acaba."""
     for linea in texto.split('\n'):
         caja = dib.textbbox((0, 0), linea, font=fuente_)
         alto = caja[3] - caja[1]
-        dib.text(((ANCHO - (caja[2] - caja[0])) / 2, y - caja[1]), linea, font=fuente_, fill=color)
+        dib.text(((ancho - (caja[2] - caja[0])) / 2, y - caja[1]), linea, font=fuente_, fill=color)
         y += round(alto * interlineado)
     return y
 
@@ -149,33 +167,40 @@ def pantalla(captura, trozos=(), ancho_max=880, alto_max=1430):
     return salida
 
 
-def con_sombra(lienzo, im, donde):
+def con_sombra(lienzo, im, donde, escala=1.0):
     """Pega la pantalla con una sombra suave: sin ella flota sobre el crema."""
     sombra = Image.new('RGBA', lienzo.size, (0, 0, 0, 0))
     hueco = Image.new('RGBA', im.size, (12, 31, 49, 70))
     hueco.putalpha(im.split()[3].point(lambda v: round(v * 0.28)))
-    sombra.paste(hueco, (donde[0], donde[1] + 18), hueco)
-    lienzo.alpha_composite(sombra.filter(ImageFilter.GaussianBlur(26)))
+    sombra.paste(hueco, (donde[0], donde[1] + round(18 * escala)), hueco)
+    lienzo.alpha_composite(sombra.filter(ImageFilter.GaussianBlur(26 * escala)))
     lienzo.alpha_composite(im.convert('RGBA'), donde)
 
 
-def pieza(captura, titular, pie, trozos=()):
-    lienzo = Image.new('RGBA', (ANCHO, ALTO), CREMA + (255,))
+def pieza(captura, titular, pie, trozos=(), tienda='play'):
+    ancho, alto = TIENDAS[tienda]
+    escala = ancho / BASE
+
+    lienzo = Image.new('RGBA', (ancho, alto), CREMA + (255,))
     dib = ImageDraw.Draw(lienzo)
 
-    y = centrado(dib, titular, fuente(NEGRITA, 76), 118, TINTA)
-    y = centrado(dib, pie, fuente(NORMAL, 36), y + 22, APAGADO)
+    y = centrado(dib, titular, fuente(NEGRITA, round(76 * escala)), round(118 * escala), TINTA, ancho)
+    y = centrado(dib, pie, fuente(NORMAL, round(36 * escala)), y + round(22 * escala), APAGADO, ancho)
 
     # Una raya de oro entre el titular y la pantalla: separa sin meter una caja.
-    dib.rounded_rectangle([(ANCHO - 96) / 2, y + 36, (ANCHO + 96) / 2, y + 44], 4, fill=ORO)
+    raya = round(96 * escala)
+    dib.rounded_rectangle(
+        [(ancho - raya) / 2, y + round(36 * escala), (ancho + raya) / 2, y + round(44 * escala)],
+        round(4 * escala), fill=ORO)
 
     # La pantalla entra entera y no se sale por abajo. Sobresalir queda más
     # moderno, pero lo último de cualquier pantalla de esta app es la barra de
     # pestañas con los globitos, y esos globitos son media venta: son la prueba
     # de que la app te avisa sola de que hay algo esperándote.
-    arriba = max(y + 96, 430)
-    im = pantalla(captura, trozos, alto_max=ALTO - arriba - 56)
-    con_sombra(lienzo, im, ((ANCHO - im.width) // 2, arriba))
+    arriba = max(y + round(96 * escala), round(430 * escala))
+    im = pantalla(captura, trozos,
+                  ancho_max=round(880 * escala), alto_max=alto - arriba - round(56 * escala))
+    con_sombra(lienzo, im, ((ancho - im.width) // 2, arriba), escala)
     return lienzo.convert('RGB')
 
 
@@ -209,27 +234,42 @@ def main():
         carpeta = pathlib.Path(sys.argv[1]).expanduser()
     else:
         carpeta = RAIZ / 'assets' / 'store' / 'capturas'
-    salida = carpeta / 'play'
-    salida.mkdir(parents=True, exist_ok=True)
 
-    grafico_destacado().save(salida / 'grafico-destacado-1024x500.png')
-    print(f'{salida / "grafico-destacado-1024x500.png"}  1024×500')
+    play = carpeta / 'play'
+    play.mkdir(parents=True, exist_ok=True)
+    grafico_destacado().save(play / 'grafico-destacado-1024x500.png')
+    print(f'{play / "grafico-destacado-1024x500.png"}  1024×500')
 
+    blandas = set()
     hechas = 0
-    for i, (titular, pie) in enumerate(TITULARES, start=1):
-        origen = carpeta / f'{i:02d}.png'
-        if not origen.exists():
-            continue
-        destino = salida / f'{i:02d}.png'
-        pieza(origen, titular, pie, TAPADOS.get(i, ())).save(destino)
-        print(f'{destino}  {ANCHO}×{ALTO}')
-        hechas += 1
+    for tienda, (ancho, alto) in TIENDAS.items():
+        salida = carpeta / tienda
+        salida.mkdir(parents=True, exist_ok=True)
+        for i, (titular, pie) in enumerate(TITULARES, start=1):
+            origen = carpeta / f'{i:02d}.png'
+            if not origen.exists():
+                continue
+            destino = salida / f'{i:02d}.png'
+            pieza(origen, titular, pie, TAPADOS.get(i, ()), tienda).save(destino)
+            print(f'{destino}  {ancho}×{alto}')
+            if tienda == 'play':
+                hechas += 1
+            # Agrandar una captura la deja borrosa, y en la ficha se ve. Las de
+            # Apple son casi un 50 % más grandes que las de Play, así que una
+            # captura que valía allí puede no valer aquí.
+            if Image.open(origen).width < round(880 * ancho / BASE):
+                blandas.add(origen.name)
 
     if hechas == 0:
         print(f'\nNo había capturas en {carpeta}. Déjalas como 01.png, 02.png… y vuelve a ejecutar.')
-    elif hechas < 4:
+        return
+    if hechas < 4:
         print(f'\nSolo {hechas}. Play pide 2 como mínimo, pero con menos de 4 la ficha no entra '
               f'en algunos sitios donde te puede colocar.')
+    if blandas:
+        print(f'\nOjo: {", ".join(sorted(blandas))} son más pequeñas de lo que hace falta y se han '
+              f'tenido que agrandar. Para la ficha de Apple se notará. Pásalas desde el iPhone sin '
+              f'que nada las comprima por el camino.')
 
 
 if __name__ == '__main__':

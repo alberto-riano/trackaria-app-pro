@@ -146,13 +146,20 @@ chat, el rechazo es por declaración incompleta, que es peor que haberlo contado
 
 ## Capturas
 
-iPhone de 6,5" (1284 × 2778) y de 6,9" (1320 × 2868). Se sacan en el iPhone con
-el centro de demostración y se enmarcan con un título arriba. Mismo orden que en
-Play para que las dos tiendas cuenten lo mismo:
+iPhone de 6,9" (1320 × 2868). Las monta `scripts/capturas.py` a partir de las
+mismas capturas en crudo que las de Play, que viven en `assets/store/capturas/`:
 
-1. Pendiente con dos cosas por hacer — «Lo que está pendiente, de un vistazo»
-2. Un chat con el relevo del bot — «Coge tú la conversación cuando haga falta»
-3. Una clase con quién viene — «Apunta a alguien con él delante»
-4. Pasar lista — «Quién vino, en dos toques»
-5. El aviso con «llegará a 14 alumnos» — «Avisa a una clase o a un horario»
-6. La agenda del día — «Las citas de hoy, sin abrir el ordenador»
+```
+python3 scripts/capturas.py
+```
+
+Deja un `apple/` al lado del `play/`. Son las mismas capturas con otro lienzo y
+una no sirve para la otra tienda: Play no admite nada más alargado que 9:16 y
+Apple exige el tamaño exacto. El orden es el mismo en las dos para que las dos
+fichas cuenten lo mismo; está en la lista `TITULARES` del script y en
+[play-store.md](play-store.md).
+
+Las capturas en crudo tienen que venir del iPhone **sin pasar por nada que las
+comprima**. Las de Apple son casi un 50 % más grandes que las de Play, así que
+una captura que valía allí hay que agrandarla aquí y se nota en la ficha. El
+script avisa cuando le toca hacerlo.
