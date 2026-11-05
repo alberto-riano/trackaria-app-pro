@@ -102,7 +102,16 @@ export function BottomSheet({ visible, onClose, children, cerrarLabel = 'Cerrar'
   );
 }
 
-/** Tarjeta en el centro: para leer algo, no para decidir nada. */
+/**
+ * Tarjeta en el centro de la pantalla.
+ *
+ * Para leer algo, y para los formularios cortos. Una hoja pegada al borde de
+ * abajo con un campo de texto tiene un problema que no se puede arreglar desde
+ * dentro: está justo donde sale el teclado, así que en cuanto se escribe sube
+ * entera, y el salto es tan alto como el teclado. Centrada, el teclado le quita
+ * sitio por abajo y la tarjeta se recoloca en lo que queda, que se mueve mucho
+ * menos y nunca se lee como un salto.
+ */
 export function CenterCard({ visible, onClose, children, cerrarLabel = 'Cerrar' }: Props) {
   const { valor, cerrar } = useApertura(visible, onClose);
 
@@ -113,7 +122,12 @@ export function CenterCard({ visible, onClose, children, cerrarLabel = 'Cerrar' 
       <Animated.View style={[styles.fondo, { opacity: valor }]}>
         <Pressable style={StyleSheet.absoluteFill} onPress={cerrar} accessibilityLabel={cerrarLabel} />
       </Animated.View>
-      <View style={styles.centro} pointerEvents="box-none">
+      <KeyboardAvoidingView
+        style={styles.centro}
+        pointerEvents="box-none"
+        // Lo mismo que en la hoja: en Android el sistema ya redimensiona la
+        // ventana, y «height» pelea con `statusBarTranslucent`.
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <Animated.View
           style={[
             styles.tarjeta,
@@ -125,7 +139,7 @@ export function CenterCard({ visible, onClose, children, cerrarLabel = 'Cerrar' 
           ]}>
           {children}
         </Animated.View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

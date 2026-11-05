@@ -141,6 +141,32 @@ export function NoEsta({ busca, onAlta }: { busca: string; onAlta: () => void })
  * de otro momento: lo que hace falta ahora es poder apuntarle a la clase de las
  * siete. Lo demás se completa en el panel cuando haya un rato.
  */
+const ESPANOL = /^[67]\d{8}$/;
+
+/**
+ * Si ese número sirve para entrar en la app de alumnos.
+ *
+ * La misma regla que el servidor, repetida aquí a propósito: el botón se
+ * apaga mientras no valga, en vez de dejar pulsar y contestar que no después
+ * de un viaje de ida y vuelta con alguien esperando delante.
+ *
+ * Un móvil español son nueve cifras empezando por 6 o 7, que es el 99 % de las
+ * altas. Un fijo entraba sin protestar y el fallo salía meses más tarde, el
+ * día en que esa persona intentaba entrar y el SMS no llegaba a ninguna parte.
+ * Con prefijo propio basta con que sea un número plausible: quien lo escribe
+ * sabe de dónde es, y aquí no se pueden saber las reglas de setenta países.
+ */
+export function telefonoValido(crudo: string) {
+  const limpio = crudo.replace(/[^\d+]/g, '');
+  if (!limpio) return false;
+  // `0034…` es el mismo `+34…` marcado a la vieja usanza.
+  const traePrefijo = limpio.startsWith('+') || limpio.startsWith('00');
+  const digitos = limpio.replace(/\D/g, '').replace(/^00/, '');
+  if (!traePrefijo) return ESPANOL.test(digitos);
+  if (digitos.startsWith('34')) return ESPANOL.test(digitos.slice(2));
+  return digitos.length >= 8 && digitos.length <= 15;
+}
+
 export function AltaDeAlumno({
   nombreSugerido, onVolver, onAlta, volverTexto = 'Volver a buscar',
 }: {
@@ -171,7 +197,7 @@ export function AltaDeAlumno({
   // guardar. Ahora la hoja aparece quieta y sube cuando tocas el campo, que es
   // cuando ya lo esperas porque lo has pedido tú.
 
-  const listo = nombre.trim().length > 0 && telefono.trim().length >= 6;
+  const listo = nombre.trim().length > 0 && telefonoValido(telefono);
 
   async function crear() {
     if (!token || !listo || guardando) return;
@@ -243,7 +269,10 @@ export function AltaDeAlumno({
         />
         {/* Es con lo que esa persona entra en la app de alumnos, así que no es
             un dato de contacto más: sin él, el alta no le sirve de nada a ella. */}
-        <Text style={styles.ayuda}>Con él entra en la app y recibe los avisos de sus clases.</Text>
+        <Text style={styles.ayuda}>
+          Con él entra en la app y recibe los avisos de sus clases. Si es de fuera de España,
+          escríbelo con su prefijo: +351…
+        </Text>
       </View>
 
       <View style={styles.acciones}>

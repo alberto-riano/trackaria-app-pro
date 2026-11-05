@@ -63,6 +63,7 @@ export type Usuario = {
     clases: boolean;
     citas: boolean;
     bonos: boolean;
+    mensualidades?: boolean;
     /**
      * Si el centro tiene WhatsApp conectado.
      *
@@ -320,6 +321,18 @@ export type Instructor = {
   hoy: Clase[];
 };
 
+/** Un horario fijo al que se puede apuntar a alguien como alumno fijo. */
+export type Grupo = {
+  id: string;
+  nombre: string;
+  color: string;
+  imagen?: string;
+  dia: string;
+  hora: string;
+  sala: string;
+  instructor: string;
+};
+
 export type CargaDeClases = { fecha: string; clases: number; completas: number };
 
 export type HorarioDia = { dia: string; tramos: string[] };
@@ -413,6 +426,13 @@ export const endpoints = {
     }),
   desactivarBono: (token: string, id: string) =>
     api<{ alumno: Alumno }>(`/bonos/${id}/desactivar/`, { method: 'POST', token }),
+  grupos: (token: string) => api<{ grupos: Grupo[] }>('/clases/grupos/', { token }),
+  apuntarAGrupos: (token: string, id: string, grupos: string[]) =>
+    api<{ alumno: Alumno; reservadas: number; llenas: number }>(`/alumnos/${id}/mensualidad/`, {
+      method: 'POST',
+      token,
+      body: { grupos },
+    }),
   tiposDeClase: (token: string) => api<{ tipos: TipoDeClase[] }>('/clases/tipos/', { token }),
   instructor: (token: string, id: string) =>
     api<{ instructor: Instructor }>(`/instructores/${id}/`, { token }),

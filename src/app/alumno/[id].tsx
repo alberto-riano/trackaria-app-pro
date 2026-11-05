@@ -4,6 +4,7 @@ import { useCallback, useState } from 'react';
 import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { AjustarBono } from '@/components/ajustar-bono';
+import { ApuntarAGrupo } from '@/components/apuntar-a-grupo';
 import { DarBono } from '@/components/dar-bono';
 import { Avatar, Boton, Card } from '@/components/ui';
 import { endpoints, type Alumno, type Bono, type ClaseSuya } from '@/lib/api';
@@ -35,8 +36,14 @@ export default function AlumnoScreen() {
   const alumno = recien ?? datos?.alumno ?? null;
   const [dandoBono, setDandoBono] = useState(false);
   const [ajustando, setAjustando] = useState<Bono | null>(null);
+  const [apuntando, setApuntando] = useState(false);
+  const [reciénApuntado, setReciénApuntado] = useState('');
 
   const hayBonos = usuario?.centro.bonos !== false;
+  // Un centro puede llevar bonos, mensualidades o las dos cosas. Sin el campo
+  // es que el servidor todavía no lo manda, y entonces no se enseña: un botón
+  // que no va a ninguna parte es peor que un botón de menos.
+  const hayCuotas = usuario?.centro.mensualidades === true;
   const clasesDeBono = (alumno?.bonos ?? []).reduce((suma, bono) => suma + bono.quedan, 0);
   const favores = (alumno?.mensualidades ?? []).reduce((suma, cuota) => suma + cuota.favores, 0);
 
@@ -86,6 +93,24 @@ export default function AlumnoScreen() {
                 variante={clasesDeBono === 0 ? 'principal' : 'suave'}
                 onPress={() => setDandoBono(true)}
               />
+            ) : null}
+
+            {hayCuotas ? (
+              <Boton
+                titulo={alumno.mensualidades.length === 0 ? 'Hacerle alumno fijo' : 'Apuntarle a otro grupo'}
+                variante="suave"
+                onPress={() => setApuntando(true)}
+              />
+            ) : null}
+
+            {/* Lo que ha pasado de verdad, no «hecho». Una clase llena no
+                cancela el alta pero hay que decirlo ahora, no que se entere el
+                martes cuando llegue y no haya sitio. */}
+            {reciénApuntado ? (
+              <View style={styles.hecho} accessibilityRole="alert">
+                <Ionicons name="checkmark-circle" size={18} color={colors.success} />
+                <Text style={styles.hechoTexto}>{reciénApuntado}</Text>
+              </View>
             ) : null}
 
             {alumno.bonos.length > 0 ? (
@@ -149,6 +174,20 @@ export default function AlumnoScreen() {
             alumno={alumno}
             onClose={() => setAjustando(null)}
             onCambiado={(actualizado) => { setRecien(actualizado); recargar(); }}
+          />
+          <ApuntarAGrupo
+            visible={apuntando}
+            alumno={alumno}
+            onClose={() => setApuntando(false)}
+            onApuntado={(actualizado, reservadas, llenas) => {
+              setRecien(actualizado);
+              recargar();
+              setReciénApuntado(
+                llenas > 0
+                  ? `Apuntado. Tiene ${reservadas} plazas reservadas y en ${llenas} no cabía: esas hay que mirarlas.`
+                  : `Apuntado. Ya tiene ${reservadas} plazas reservadas.`,
+              );
+            }}
           />
         </>
       ) : null}
@@ -261,6 +300,11 @@ const styles = StyleSheet.create({
   },
   bloqueCard: { paddingVertical: space.sm },
   vacio: { fontSize: 14, color: colors.muted, paddingVertical: space.sm },
+  hecho: {
+    flexDirection: 'row', alignItems: 'center', gap: space.sm,
+    backgroundColor: colors.successSoft, borderRadius: radius.md, padding: space.md,
+  },
+  hechoTexto: { flex: 1, fontSize: 14, color: colors.text, lineHeight: 20 },
   fila: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: space.sm },
   icono: {
     width: 36, height: 36, borderRadius: 18, backgroundColor: colors.brandSoft,

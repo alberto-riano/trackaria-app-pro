@@ -8,7 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Avisar } from '@/components/avisar';
 import { AltaDeAlumno, useBusqueda } from '@/components/buscar-alumno';
-import { BottomSheet } from '@/components/overlay';
+import { CenterCard } from '@/components/overlay';
 import { Avatar, Boton, EmptyState, Encabezado } from '@/components/ui';
 import { useSession } from '@/lib/session';
 import { colors, radius, space } from '@/lib/theme';
@@ -136,7 +136,10 @@ export default function AlumnosScreen() {
 
       <Avisar visible={avisando} onClose={() => setAvisando(false)} />
 
-      <BottomSheet visible={dandoDeAlta} onClose={() => setDandoDeAlta(false)} cerrarLabel="Cerrar">
+      {/* En el centro y no pegada abajo: lleva dos campos de texto, y una hoja
+          en el borde de abajo está justo donde sale el teclado. Centrada, el
+          teclado le quita sitio y se recoloca en lo que queda. */}
+      <CenterCard visible={dandoDeAlta} onClose={() => setDandoDeAlta(false)} cerrarLabel="Cerrar">
         <AltaDeAlumno
           nombreSugerido={busca}
           onVolver={() => setDandoDeAlta(false)}
@@ -146,7 +149,7 @@ export default function AlumnosScreen() {
             router.push(`/alumno/${alta.id}`);
           }}
         />
-      </BottomSheet>
+      </CenterCard>
     </>
   );
 }
