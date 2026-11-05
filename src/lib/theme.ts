@@ -1,3 +1,6 @@
+import * as SecureStore from 'expo-secure-store';
+import * as Updates from 'expo-updates';
+
 /**
  * Los mismos colores que la app de clases y que la web: es la misma marca y el
  * mismo dueño de centro quien ve las dos cosas.
@@ -6,6 +9,39 @@
  * paciente, mirando si hay algo que decidir. Así que la jerarquía la marcan el
  * ámbar de «esto te espera» y el verde de «esto ya está».
  */
+
+/**
+ * El fondo, que se puede cambiar desde Cuenta.
+ *
+ * El crema es el del icono y hace que las tarjetas blancas se vean como
+ * tarjetas: sobre el gris, que es casi blanco, no tienen borde ni sombra ni
+ * contraste y flotan. El gris es el que compartía con la app de clientes y la
+ * web.
+ *
+ * Se lee de forma síncrona al arrancar y no con un contexto porque los estilos
+ * se construyen al cargar cada módulo, antes de que React pinte nada: un valor
+ * que llega después no llegaría a ninguna hoja de estilos. Por eso cambiarlo
+ * reinicia la app, que es lo que hace `cambiarFondo`.
+ */
+export const FONDOS = {
+  crema: '#f4efe3',
+  gris: '#f6f8f7',
+} as const;
+
+export type Fondo = keyof typeof FONDOS;
+
+function guardado(): Fondo {
+  // En el primer arranque, o si el llavero falla, el crema: es el que lleva la
+  // marca y el que deja ver las tarjetas.
+  try {
+    return SecureStore.getItem('fondo') === 'gris' ? 'gris' : 'crema';
+  } catch {
+    return 'crema';
+  }
+}
+
+export const fondo: Fondo = guardado();
+
 export const colors = {
   brand: '#08766c',
   brandDark: '#065f57',
@@ -15,7 +51,7 @@ export const colors = {
   faint: '#9ca3af',
   border: '#e5e7eb',
   surface: '#ffffff',
-  background: '#f6f8f7',
+  background: FONDOS[fondo],
   // El verde de WhatsApp, para el botón que abre WhatsApp y para nada más.
   whatsapp: '#25d366',
   success: '#15803d',
@@ -33,6 +69,19 @@ export const colors = {
   botFuerte: '#7c3aed',
   centroFuerte: '#0f766e',
 } as const;
+
+/**
+ * Guarda el fondo y reinicia la app para que se aplique.
+ *
+ * Reiniciar no es pereza: las hojas de estilo se construyen una vez, al cargar
+ * cada módulo, así que no hay forma de que un cambio posterior llegue a todas.
+ * El reinicio es inmediato y la sesión no se pierde —está en el llavero—, así
+ * que se nota menos que la pantalla a medio repintar que saldría si no.
+ */
+export async function cambiarFondo(nuevo: Fondo) {
+  SecureStore.setItem('fondo', nuevo);
+  await Updates.reloadAsync();
+}
 
 export const radius = { sm: 8, md: 12, lg: 18, pill: 999 } as const;
 

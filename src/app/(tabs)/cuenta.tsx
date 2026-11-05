@@ -10,7 +10,7 @@ import { Card, Encabezado } from '@/components/ui';
 import { endpoints, type Centro, type HorarioDia } from '@/lib/api';
 import { useDatos } from '@/lib/datos';
 import { useSession } from '@/lib/session';
-import { colors, radius, space } from '@/lib/theme';
+import { cambiarFondo, colors, type Fondo, fondo, radius, space } from '@/lib/theme';
 
 /**
  * El centro y tu cuenta.
@@ -182,6 +182,13 @@ export default function CuentaScreen() {
             </Bloque>
           ) : null}
 
+          {/* Lo único de esta pantalla que se puede cambiar, y es porque no
+              sale de este móvil: no toca los datos del centro ni lo que el bot
+              ofrece, que es la razón por la que todo lo demás es de lectura. */}
+          <Bloque titulo="Fondo">
+            <ElFondo />
+          </Bloque>
+
           <Bloque titulo="El centro">
             {centro.direccion ? (
               <Dato icono="location-outline" texto={centro.direccion} />
@@ -240,6 +247,42 @@ export default function CuentaScreen() {
         </Pressable>
       </View>
     </ScrollView>
+  );
+}
+
+/** Las dos pieles, para ir viendo cuál convence. */
+function ElFondo() {
+  const [cambiando, setCambiando] = useState(false);
+  const opciones: { valor: Fondo; nombre: string; muestra: string }[] = [
+    { valor: 'crema', nombre: 'Crema', muestra: '#f4efe3' },
+    { valor: 'gris', nombre: 'Gris', muestra: '#f6f8f7' },
+  ];
+  return (
+    <>
+      <View style={styles.fondos}>
+        {opciones.map((opcion) => (
+          <Pressable
+            key={opcion.valor}
+            accessibilityRole="radio"
+            accessibilityState={{ selected: fondo === opcion.valor, disabled: cambiando }}
+            disabled={cambiando || fondo === opcion.valor}
+            onPress={() => { setCambiando(true); cambiarFondo(opcion.valor); }}
+            style={({ pressed }) => [
+              styles.fondo,
+              fondo === opcion.valor && styles.fondoElegido,
+              pressed && { opacity: 0.7 },
+            ]}>
+            <View style={[styles.muestra, { backgroundColor: opcion.muestra }]} />
+            <Text style={[styles.fondoNombre, fondo === opcion.valor && styles.fondoNombreElegido]}>
+              {opcion.nombre}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+      <Text style={styles.fondoNota}>
+        {cambiando ? 'Reiniciando…' : 'Al cambiarlo la app se reinicia sola.'}
+      </Text>
+    </>
   );
 }
 
@@ -313,6 +356,16 @@ const styles = StyleSheet.create({
   bloque: { gap: space.sm },
   bloqueTitulo: { fontSize: 11, fontWeight: '800', letterSpacing: 0.6, color: colors.faint, paddingHorizontal: space.xs },
   bloqueCaja: { gap: space.sm },
+  fondos: { flexDirection: 'row', gap: space.sm },
+  fondo: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: space.sm,
+    minHeight: 44, borderRadius: radius.md, borderWidth: 1.5, borderColor: colors.border,
+  },
+  fondoElegido: { borderColor: colors.brand, backgroundColor: colors.brandSoft },
+  muestra: { width: 18, height: 18, borderRadius: 9, borderWidth: 1, borderColor: colors.border },
+  fondoNombre: { fontSize: 14, fontWeight: '700', color: colors.muted },
+  fondoNombreElegido: { color: colors.brandDark },
+  fondoNota: { fontSize: 12, color: colors.faint },
   dato: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   datoTexto: { flex: 1, fontSize: 15, color: colors.muted },
   vacio: { fontSize: 14, color: colors.faint, fontStyle: 'italic' },

@@ -164,52 +164,64 @@ export default function ChatScreen() {
 function Mando({ bot, ocupado, onCambiar }: { bot: boolean; ocupado: boolean; onCambiar: (valor: boolean) => void }) {
   return (
     <View style={styles.mando}>
-      <Opcion
-        activa={bot}
-        ocupado={ocupado}
-        icono="sparkles"
-        texto="Lo lleva el bot"
-        color={colors.bot}
-        fondo={colors.botSoft}
-        onPress={() => onCambiar(true)}
-      />
-      <Opcion
-        activa={!bot}
-        ocupado={ocupado}
-        icono="person"
-        texto="Contesto yo"
-        color={colors.brandDark}
-        fondo={colors.brandSoft}
-        onPress={() => onCambiar(false)}
-      />
+      {/* Una píldora de dos mitades y no dos botones sueltos: lo que se elige
+          es entre dos, y así se ve de un vistazo cuál está puesta sin tener
+          que comparar dos bordes. */}
+      <View style={styles.pastilla}>
+        <Opcion
+          activa={bot}
+          ocupado={ocupado}
+          icono="sparkles"
+          texto="Lo lleva el bot"
+          color={colors.bot}
+          onPress={() => onCambiar(true)}
+        />
+        <Opcion
+          activa={!bot}
+          ocupado={ocupado}
+          icono="person"
+          texto="Contesto yo"
+          color={colors.brandDark}
+          onPress={() => onCambiar(false)}
+        />
+      </View>
     </View>
   );
 }
 
 function Opcion({
-  activa, ocupado, icono, texto, color, fondo, onPress,
+  activa, ocupado, icono, texto, color, onPress,
 }: {
   activa: boolean;
   ocupado: boolean;
   icono: 'sparkles' | 'person';
   texto: string;
+  /**
+   * El de quien contesta: morado el bot, verde tú.
+   *
+   * Son los mismos de las burbujas, y por eso cada mitad lleva el suyo en vez
+   * de uno solo para las dos. Leyendo el hilo, el morado ya quiere decir «esto
+   * lo ha escrito el bot»; si el mando fuese verde con el bot puesto, el color
+   * dejaría de significar nada. Puesto solo en el texto y el icono, y con la
+   * mitad elegida en blanco, el morado ocupa una décima parte de lo que
+   * ocupaba y sigue diciendo lo mismo.
+   */
   color: string;
-  fondo: string;
   onPress: () => void;
 }) {
   return (
     <Pressable
       accessibilityRole="radio"
       accessibilityState={{ selected: activa, disabled: ocupado }}
-      disabled={ocupado}
+      disabled={ocupado || activa}
       onPress={onPress}
       style={({ pressed }) => [
         styles.opcion,
-        activa && { backgroundColor: fondo, borderColor: color },
+        activa && styles.opcionActiva,
         (pressed || ocupado) && { opacity: 0.8 },
       ]}>
-      <Ionicons name={icono} size={15} color={activa ? color : colors.faint} />
-      <Text style={[styles.opcionTexto, { color: activa ? color : colors.faint }]}>{texto}</Text>
+      <Ionicons name={icono} size={15} color={activa ? color : colors.muted} />
+      <Text style={[styles.opcionTexto, { color: activa ? color : colors.muted }]}>{texto}</Text>
     </Pressable>
   );
 }
@@ -247,12 +259,23 @@ const styles = StyleSheet.create({
   pantalla: { flex: 1, backgroundColor: colors.background },
   cargando: { marginTop: space.xxl },
   mando: {
-    flexDirection: 'row', gap: space.sm, padding: space.md,
+    padding: space.md,
     backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border,
+  },
+  pastilla: {
+    flexDirection: 'row', padding: 3, gap: 3,
+    borderRadius: radius.pill, backgroundColor: colors.border,
   },
   opcion: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    minHeight: 40, borderRadius: radius.md, borderWidth: 1.5, borderColor: colors.border,
+    minHeight: 38, borderRadius: radius.pill,
+  },
+  // La mitad puesta se levanta sobre la otra: en blanco y con una sombra corta,
+  // que es lo que la hace parecer una pastilla encima y no un trozo pintado.
+  opcionActiva: {
+    backgroundColor: colors.surface,
+    shadowColor: '#0c1f31', shadowOpacity: 0.12, shadowRadius: 3, shadowOffset: { width: 0, height: 1 },
+    elevation: 2,
   },
   opcionTexto: { fontSize: 14, fontWeight: '700' },
   hilo: { padding: space.lg, gap: space.sm },
