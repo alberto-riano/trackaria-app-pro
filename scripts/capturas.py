@@ -150,21 +150,66 @@ def tapar(im, trozos):
     return im
 
 
+# Dónde cae la isla dinámica dentro de la captura, en fracciones de su tamaño.
+#
+# La captura de un iPhone trae la barra de estado pero no la isla: el hueco
+# entre la hora y la batería sale del color de la app. Dibujarla ahí es
+# devolverle lo que el sistema no guarda, no inventarse nada.
+ISLA = (0.3576, 0.0143, 0.6424, 0.0527)
+
+# El grosor del marco y el color del cuerpo, en fracciones del ancho del móvil.
+MARCO = 0.030
+CUERPO = (46, 46, 50)
+CANTO = (92, 92, 100)
+
+
+def enmarcar(im):
+    """Mete la pantalla en un cuerpo de iPhone.
+
+    El marco no es adorno: es lo que le da un borde cuando el fondo del lienzo
+    y el de la app son del mismo color y la pantalla se funde con el papel.
+    Y de paso se lee como un móvil y no como un recorte.
+    """
+    grosor = max(2, round(im.width * MARCO))
+    ancho, alto = im.width + grosor * 2, im.height + grosor * 2
+    radio = round(im.width * 0.055) + grosor
+
+    cuerpo = Image.new('RGBA', (ancho, alto), (0, 0, 0, 0))
+    dib = ImageDraw.Draw(cuerpo)
+    dib.rounded_rectangle([0, 0, ancho - 1, alto - 1], radio, fill=CUERPO + (255,))
+    # Un filo más claro por dentro: sin él el cuerpo es una mancha negra y no
+    # se lee como metal.
+    dib.rounded_rectangle([1, 1, ancho - 2, alto - 2], radio - 1,
+                          outline=CANTO + (255,), width=max(1, round(grosor * 0.18)))
+    cuerpo.alpha_composite(im, (grosor, grosor))
+    return cuerpo
+
+
 def pantalla(captura, trozos=(), ancho_max=880, alto_max=1430):
-    """La captura del móvil, encajada y con la esquina redondeada."""
+    """La captura del móvil, encajada, con la isla y dentro de su marco."""
     im = Image.open(captura).convert('RGB')
     # Se tapa antes de reducir, sobre la imagen grande: así lo repintado se
     # reduce igual que el resto de la captura y no se nota el remiendo.
     if trozos:
         im = tapar(im, trozos)
-    factor = min(ancho_max / im.width, alto_max / im.height)
+    # La isla se pinta sobre la captura grande y antes de reducir, para que sus
+    # bordes se suavicen igual que todo lo demás.
+    ImageDraw.Draw(im).rounded_rectangle(
+        [round(ISLA[0] * im.width), round(ISLA[1] * im.height),
+         round(ISLA[2] * im.width), round(ISLA[3] * im.height)],
+        round((ISLA[3] - ISLA[1]) * im.height / 2), fill=(0, 0, 0))
+
+    # El marco ocupa sitio, así que la pantalla tiene que entrar algo más
+    # pequeña para que el conjunto siga cabiendo donde cabía.
+    hueco = 1 + 2 * MARCO
+    factor = min(ancho_max / (im.width * hueco), alto_max / (im.height * hueco))
     im = im.resize((round(im.width * factor), round(im.height * factor)), Image.LANCZOS)
     radio = round(im.width * 0.055)
     mascara = Image.new('L', im.size, 0)
     ImageDraw.Draw(mascara).rounded_rectangle([0, 0, im.width - 1, im.height - 1], radio, fill=255)
     salida = Image.new('RGBA', im.size, (0, 0, 0, 0))
     salida.paste(im, (0, 0), mascara)
-    return salida
+    return enmarcar(salida)
 
 
 def con_sombra(lienzo, im, donde, escala=1.0):
