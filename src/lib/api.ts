@@ -146,6 +146,8 @@ export type Chat = {
   /** Si está esperando a alguien del centro. */
   esperando: boolean;
   motivo: string;
+  /** Su ficha de alumno, si el número está dado de alta. Vacío si no. */
+  alumno: string;
 };
 
 export type Mensaje = {
@@ -378,6 +380,9 @@ export const endpoints = {
     api<{ mensajes: Mensaje[] }>(`/chats/${id}/enviar/`, { method: 'POST', token, body: { texto } }),
   bot: (token: string, id: string, activo: boolean) =>
     api<{ chat: Chat }>(`/chats/${id}/bot/`, { method: 'POST', token, body: { activo } }),
+  /** El mando de golpe: todas al bot, o todas para ti. Devuelve cuántas cambiaron. */
+  botTodos: (token: string, activo: boolean) =>
+    api<{ cuantas: number }>('/chats/bot/', { method: 'POST', token, body: { activo } }),
   cita: (token: string, id: string) => api<{ cita: CitaDetalle }>(`/citas/${id}/`, { token }),
   confirmarCita: (token: string, id: string) =>
     api<{ cita: Cita; avisado: boolean }>(`/citas/${id}/confirmar/`, { method: 'POST', token }),

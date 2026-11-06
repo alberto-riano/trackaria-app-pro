@@ -1,5 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Stack, useLocalSearchParams } from 'expo-router';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator, Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView,
@@ -8,7 +8,7 @@ import {
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { ApiError, endpoints, type Mensaje } from '@/lib/api';
+import { ApiError, endpoints, type Chat, type Mensaje } from '@/lib/api';
 import { useDatos } from '@/lib/datos';
 import { hora } from '@/lib/format';
 import { conMarcas } from '@/lib/marcas';
@@ -43,12 +43,33 @@ export default function ChatScreen() {
   // Abrir el teclado no cambia el contenido, solo el alto, así que el hilo no
   // se movía solo y el último mensaje quedaba tapado. Se baja al final en
   // cuanto el teclado termina de subir.
+  //
+  // Y de paso se apunta si está puesto, que es lo que decide el hueco de abajo:
+  // con el teclado delante, el sitio del indicador de inicio y el de la barra
+  // de Android ya no están ahí, y reservarlo igual deja una franja en blanco
+  // entre lo que escribes y las teclas.
+  const [teclado, setTeclado] = useState(false);
   useEffect(() => {
     const abierto = Keyboard.addListener('keyboardDidShow', () => {
+      setTeclado(true);
       scroll.current?.scrollToEnd({ animated: true });
     });
-    return () => abierto.remove();
+    const cerrado = Keyboard.addListener('keyboardDidHide', () => setTeclado(false));
+    return () => {
+      abierto.remove();
+      cerrado.remove();
+    };
   }, []);
+
+  /**
+   * Lo que hay que dejar libre debajo de la barra de escribir.
+   *
+   * Eran 24 puntos fijos y en Android no llegan: allí la app se pinta por
+   * debajo de la barra de botones del sistema, así que el campo de texto y el
+   * botón de enviar salían cortados por el borde de abajo. El hueco lo dice el
+   * móvil —`insets.bottom`—, con un mínimo para los que no reservan nada.
+   */
+  const abajo = teclado ? space.md : Math.max(insets.bottom, space.md) + space.xs;
 
   const chat = datos?.chat ?? null;
   const mensajes = datos?.mensajes ?? [];
@@ -95,7 +116,7 @@ export default function ChatScreen() {
       // en un móvil con más muesca el hilo subía de menos y el último mensaje
       // se quedaba debajo del teclado, que es justo el que querías leer.
       keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top + 44 : 0}>
-      <Stack.Screen options={{ title: chat?.persona ?? '' }} />
+      <Stack.Screen options={{ headerTitle: () => (chat ? <Titulo chat={chat} /> : null) }} />
 
       {chat ? <Mando bot={chat.bot} ocupado={cambiando} onCambiar={cambiarMando} /> : null}
 
@@ -121,14 +142,14 @@ export default function ChatScreen() {
       )}
 
       {chat?.bot !== false ? (
-        <View style={styles.bloqueado}>
+        <View style={[styles.bloqueado, { paddingBottom: abajo }]}>
           <Ionicons name="sparkles" size={18} color={colors.bot} />
           <Text style={styles.bloqueadoTexto}>
             Está contestando el bot. Toca <Text style={styles.resalte}>Contesto yo</Text> para escribir tú.
           </Text>
         </View>
       ) : (
-        <View style={styles.barra}>
+        <View style={[styles.barra, { paddingBottom: abajo }]}>
           {!yaIntervenido ? (
             <Text style={styles.aviso}>Al enviar, se le dirá que a partir de ahora le atiende una persona.</Text>
           ) : null}
@@ -157,6 +178,33 @@ export default function ChatScreen() {
         </View>
       )}
     </KeyboardAvoidingView>
+  );
+}
+
+/**
+ * El nombre de quien escribe y, detrás, su ficha.
+ *
+ * Es leyendo la conversación cuando hace falta lo que la conversación no
+ * cuenta —cuántas sesiones le quedan del bono, a qué clases viene—, y hasta
+ * ahora eso eran cuatro pasos: atrás, Alumnos, buscar y escribir el nombre.
+ *
+ * Si el número no está dado de alta no hay ficha a la que ir, y entonces es
+ * texto a secas: un nombre con galón que no lleva a ningún sitio se toca una
+ * vez, no pasa nada, y ya no se vuelve a tocar el de los que sí llevan.
+ */
+function Titulo({ chat }: { chat: Chat }) {
+  if (!chat.alumno) {
+    return <Text style={styles.tituloSolo} numberOfLines={1}>{chat.persona}</Text>;
+  }
+  return (
+    <Pressable
+      accessibilityRole="link"
+      accessibilityLabel={`Ver la ficha de ${chat.persona}`}
+      onPress={() => router.push(`/alumno/${chat.alumno}`)}
+      style={({ pressed }) => [styles.titulo, pressed && { opacity: 0.6 }]}>
+      <Text style={styles.tituloTexto} numberOfLines={1}>{chat.persona}</Text>
+      <Ionicons name="chevron-forward" size={15} color={colors.brand} />
+    </Pressable>
   );
 }
 
@@ -234,6 +282,7 @@ function Burbuja({ mensaje }: { mensaje: Mensaje }) {
   // el morado y por su firma.
   const nuestro = mensaje.de === 'centro' || esBot;
   const mio = mensaje.de === 'centro';
+  const cuando = hora(new Date(mensaje.cuando));
   return (
     <View style={[styles.burbujaFila, nuestro && styles.burbujaFilaMia]}>
       <View style={[styles.burbuja, mio && styles.burbujaMia, esBot && styles.burbujaBot]}>
@@ -248,8 +297,15 @@ function Burbuja({ mensaje }: { mensaje: Mensaje }) {
           {conMarcas(mensaje.texto).map((trozo, orden) => (
             <Text key={orden} style={trozo.estilos.map((estilo) => styles[estilo])}>{trozo.texto}</Text>
           ))}
+          {/* El sitio de la hora, pintado en transparente y dentro del texto.
+              La hora de verdad va suelta en la esquina, así que si no se le
+              reservara el hueco se le montaría encima a la última palabra. Al
+              ir aquí dentro, la última línea la rodea como en WhatsApp, y
+              cuando no cabe se baja ella sola. Los espacios son `figure
+              space`: no se parten de línea y no se los come el salto. */}
+          <Text style={styles.hueco}>{`\u2007\u2007${cuando}`}</Text>
         </Text>
-        <Text style={[styles.burbujaHora, mio && styles.burbujaHoraMia]}>{hora(new Date(mensaje.cuando))}</Text>
+        <Text style={[styles.burbujaHora, mio && styles.burbujaHoraMia]}>{cuando}</Text>
       </View>
     </View>
   );
@@ -278,6 +334,9 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   opcionTexto: { fontSize: 14, fontWeight: '700' },
+  titulo: { flexDirection: 'row', alignItems: 'center', gap: 2, maxWidth: 240 },
+  tituloTexto: { flexShrink: 1, fontSize: 17, fontWeight: '700', color: colors.text },
+  tituloSolo: { maxWidth: 240, fontSize: 17, fontWeight: '700', color: colors.text },
   hilo: { padding: space.lg, gap: space.sm },
   burbujaFila: { flexDirection: 'row' },
   burbujaFilaMia: { justifyContent: 'flex-end' },
@@ -298,18 +357,21 @@ const styles = StyleSheet.create({
   cursiva: { fontStyle: 'italic' },
   tachado: { textDecorationLine: 'line-through' },
   mono: { fontFamily: Platform.select({ ios: 'Menlo', default: 'monospace' }) },
-  burbujaHora: { fontSize: 11, color: colors.faint, alignSelf: 'flex-end' },
+  // Flotando en la esquina y no en una línea suya: una línea entera para
+  // cinco caracteres dejaba tres mensajes donde caben cinco.
+  burbujaHora: { position: 'absolute', right: space.md, bottom: space.md, fontSize: 11, color: colors.faint },
+  hueco: { fontSize: 11, color: 'transparent' },
   burbujaHoraMia: { color: 'rgba(255,255,255,0.75)' },
   bloqueado: {
     flexDirection: 'row', alignItems: 'center', gap: space.sm,
     backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: colors.border,
-    padding: space.lg, paddingBottom: space.xl,
+    padding: space.lg,
   },
   bloqueadoTexto: { flex: 1, fontSize: 14, color: colors.muted, lineHeight: 20 },
   resalte: { fontWeight: '800', color: colors.brandDark },
   barra: {
     backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: colors.border,
-    padding: space.md, paddingBottom: space.xl, gap: space.sm,
+    padding: space.md, gap: space.sm,
   },
   aviso: { fontSize: 12, color: colors.faint, paddingHorizontal: space.xs },
   campoFila: { flexDirection: 'row', alignItems: 'flex-end', gap: space.sm },

@@ -2,12 +2,12 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
-  ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View,
+  ActivityIndicator, Alert, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Avatar, EmptyState, Encabezado } from '@/components/ui';
-import { endpoints, type Chat } from '@/lib/api';
+import { ApiError, endpoints, type Chat } from '@/lib/api';
 import { useDatos } from '@/lib/datos';
 import { timeAgo } from '@/lib/format';
 import { sinMarcas } from '@/lib/marcas';
@@ -29,7 +29,7 @@ import { colors, radius, space } from '@/lib/theme';
  */
 export default function ChatsScreen() {
   const insets = useSafeAreaInsets();
-  const { usuario } = useSession();
+  const { token, usuario } = useSession();
   const [texto, setTexto] = useState('');
   const [busca, setBusca] = useState('');
   const [quien, setQuien] = useState<Quien>('todos');
@@ -41,8 +41,8 @@ export default function ChatsScreen() {
     return () => clearTimeout(reloj);
   }, [texto]);
 
-  const { datos, error, refrescando, refrescar } = useDatos(
-    useCallback((token: string) => endpoints.chats(token, busca), [busca]),
+  const { datos, error, refrescando, refrescar, recargar } = useDatos(
+    useCallback((clave: string) => endpoints.chats(clave, busca), [busca]),
     // Mientras se busca no se repasa solo: la lista cambiaría bajo el dedo
     // mientras lees los resultados.
     { cada: busca ? undefined : 15_000 },
@@ -57,12 +57,53 @@ export default function ChatsScreen() {
     ? todos
     : todos.filter((item) => (quien === 'bot' ? item.bot : !item.bot));
 
+  const [cambiando, setCambiando] = useState(false);
+  const [fallo, setFallo] = useState('');
+
+  /**
+   * El mando de todas a la vez.
+   *
+   * Se pregunta antes porque no tiene vuelta de un toque: devolvérselas todas
+   * al bot le escribe «vuelve el asistente virtual» a cada uno de los que de
+   * verdad llegaron a hablar contigo, y eso ya no se puede retirar.
+   */
+  function mandoDeTodas(bot: boolean) {
+    Alert.alert(
+      bot ? '¿Se las pasas todas al bot?' : '¿Las coges todas?',
+      bot
+        ? 'El bot volverá a contestar en todas las conversaciones. A quien estuvieras atendiendo tú se le avisará de que vuelve el asistente.'
+        : 'El bot dejará de contestar en todas las conversaciones. No se avisa a nadie: a cada uno se le dirá cuando le escribas.',
+      [
+        { text: 'Ahora no', style: 'cancel' },
+        { text: bot ? 'Pasárselas' : 'Cogerlas', onPress: () => aplicar(bot) },
+      ],
+    );
+  }
+
+  async function aplicar(bot: boolean) {
+    if (!token || cambiando) return;
+    setCambiando(true);
+    setFallo('');
+    try {
+      await endpoints.botTodos(token, bot);
+      await recargar();
+    } catch (problema) {
+      setFallo(problema instanceof ApiError ? problema.message : 'No se ha podido cambiar.');
+    } finally {
+      setCambiando(false);
+    }
+  }
+
   return (
     <ScrollView
       contentContainerStyle={[styles.contenido, { paddingTop: insets.top + space.lg }]}
       showsVerticalScrollIndicator={false}
       refreshControl={<RefreshControl refreshing={refrescando} onRefresh={refrescar} tintColor={colors.brand} />}>
       <Encabezado titulo="Chats" coletilla={usuario?.centro.nombre} />
+
+      {!busca && todos && todos.length > 0 ? (
+        <Mando cuantos={cuantos} ocupado={cambiando} onCambiar={mandoDeTodas} />
+      ) : null}
 
       <View style={styles.buscador}>
         <Ionicons name="search" size={17} color={colors.faint} />
@@ -83,10 +124,10 @@ export default function ChatsScreen() {
         <Filtros quien={quien} onCambiar={setQuien} cuantos={cuantos} />
       ) : null}
 
-      {error ? (
+      {error || fallo ? (
         <View style={styles.error} accessibilityRole="alert">
           <Ionicons name="alert-circle" size={18} color={colors.danger} />
-          <Text style={styles.errorTexto}>{error}</Text>
+          <Text style={styles.errorTexto}>{error || fallo}</Text>
         </View>
       ) : null}
 
@@ -114,6 +155,79 @@ export default function ChatsScreen() {
         </View>
       )}
     </ScrollView>
+  );
+}
+
+/**
+ * Quién contesta en todas, de un gesto.
+ *
+ * Es la misma pastilla que hay dentro de una conversación y a propósito: la
+ * decisión casi nunca es de un chat suelto. O entras a la sala y que conteste
+ * el bot, o has terminado y las coges todas. Hacerlo chat a chat eran veinte
+ * gestos para una sola intención, y era lo único del panel que no estaba aquí.
+ *
+ * La mitad levantada es la que ya vale para todas. Cuando hay de las dos no se
+ * levanta ninguna: no hay un estado único que enseñar, y pintar uno sería
+ * mentir sobre la mitad de las conversaciones.
+ */
+function Mando({
+  cuantos, ocupado, onCambiar,
+}: {
+  cuantos: { bot: number; centro: number };
+  ocupado: boolean;
+  onCambiar: (bot: boolean) => void;
+}) {
+  const todasBot = cuantos.centro === 0;
+  const todasMias = cuantos.bot === 0;
+  return (
+    <View style={styles.pastilla}>
+      <Mitad
+        puesta={todasBot}
+        ocupado={ocupado}
+        icono="sparkles"
+        texto="Las lleva el bot"
+        color={colors.bot}
+        onPress={() => onCambiar(true)}
+      />
+      <Mitad
+        puesta={todasMias}
+        ocupado={ocupado}
+        icono="person"
+        texto="Las cojo yo"
+        color={colors.brandDark}
+        onPress={() => onCambiar(false)}
+      />
+    </View>
+  );
+}
+
+function Mitad({
+  puesta, ocupado, icono, texto, color, onPress,
+}: {
+  puesta: boolean;
+  ocupado: boolean;
+  icono: 'sparkles' | 'person';
+  texto: string;
+  color: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ selected: puesta, disabled: ocupado || puesta }}
+      accessibilityLabel={texto}
+      // La que ya vale para todas no hace nada: tocarla pediría confirmación
+      // para un cambio que no cambia nada.
+      disabled={ocupado || puesta}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.mitad,
+        puesta && styles.mitadPuesta,
+        (pressed || ocupado) && { opacity: 0.8 },
+      ]}>
+      <Ionicons name={icono} size={15} color={puesta ? color : colors.muted} />
+      <Text style={[styles.mitadTexto, { color: puesta ? color : colors.muted }]}>{texto}</Text>
+    </Pressable>
   );
 }
 
@@ -226,6 +340,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.md, marginBottom: space.md,
   },
   campo: { flex: 1, minHeight: 42, fontSize: 15, color: colors.text },
+  pastilla: {
+    flexDirection: 'row', padding: 3, gap: 3, marginBottom: space.md,
+    borderRadius: radius.pill, backgroundColor: colors.border,
+  },
+  mitad: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    minHeight: 38, borderRadius: radius.pill,
+  },
+  mitadPuesta: {
+    backgroundColor: colors.surface,
+    shadowColor: '#0c1f31', shadowOpacity: 0.12, shadowRadius: 3, shadowOffset: { width: 0, height: 1 },
+    elevation: 2,
+  },
+  mitadTexto: { fontSize: 14, fontWeight: '700' },
   leyenda: { flexDirection: 'row', gap: space.sm, marginBottom: space.md },
   leyendaItem: {
     flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6,
