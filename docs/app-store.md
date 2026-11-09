@@ -17,7 +17,7 @@ las dos tiendas revisan lo mismo y una contradicción es motivo de rechazo.
 | Categoría principal | Empresa |
 | Categoría secundaria | Productividad |
 | Derechos de contenido | No contiene contenido de terceros |
-| Clasificación por edad | Responder «Ninguno» a todo salvo lo de abajo → 4+ |
+| Clasificación por edad | 4+ (confirmado en noviembre de 2026) |
 | Precio | Gratis |
 | Disponibilidad | España |
 | URL de soporte | https://www.trackaria.com/app/ |
@@ -25,11 +25,22 @@ las dos tiendas revisan lo mismo y una contradicción es motivo de rechazo.
 | URL de la política de privacidad | https://www.trackaria.com/privacidad/ |
 | Copyright | `2026 Alberto Riaño González` |
 
-En la clasificación por edad, Apple pregunta si la app incluye contenido
-generado por el usuario o comunicación sin moderar. Aquí la comunicación es
-entre un negocio y sus propios clientes por el WhatsApp del centro, no entre
-desconocidos: no hay perfiles, ni búsqueda de gente, ni contenido público. Se
-responde eso si preguntan.
+El cuestionario de edad de Apple son siete pasos. En el primero, «Prestaciones»,
+va todo que **no** —controles parentales, verificación de edad, acceso web no
+restringido, contenido generado por los usuarios, redes sociales y publicidad—
+menos **«Mensajería y chat», que va que sí**. La app deja escribir a una persona
+de verdad desde dentro, y las notas de revisión le piden al revisor que abra un
+chat: declarar que no hay mensajería y enseñarle una pantalla de chat es un
+rechazo por declaración incompleta. Con esa respuesta la clasificación calculada
+sigue siendo **4+**, así que no cuesta nada.
+
+Los pasos 2 a 7 son el cuestionario de contenido y van todos a «Ninguno». En el
+último, «Categorías de edades y reemplazo manual», se deja **«No aplicable»**:
+«Apta para menores» es el programa Made for Kids y no tiene nada que ver.
+
+Aquí la comunicación es entre un negocio y sus propios clientes por el WhatsApp
+del centro, no entre desconocidos: no hay perfiles, ni búsqueda de gente, ni
+contenido público. Se responde eso si preguntan.
 
 ## Texto promocional (máx. 170, se puede cambiar sin nueva versión)
 
@@ -183,6 +194,20 @@ está en `seed_revisor`, que es el único sitio donde vive.
 Las filas de teléfono y mensajes son la diferencia con la app de clientes: esta
 app enseña y escribe datos de terceros. Si no se declaran y el revisor abre un
 chat, el rechazo es por declaración incompleta, que es peor que haberlo contado.
+
+**Salud se dejó sin declarar**, a sabiendas. La ficha de una cita enseña el
+motivo —«fascitis plantar»—, que encaja con el «cualquier otro dato de salud o
+médico» de Apple, pero es un renglón de agenda y no una historia clínica: no hay
+HealthKit, ni medidas, ni seguimiento clínico. Si algún día el motivo de la cita
+pasa a ser texto libre de verdad, hay que volver a mirarlo.
+
+Cada tipo lleva las mismas tres respuestas: **Funcionalidad de la app**,
+**vinculado a la identidad sí**, **rastreo no**. Lo de vinculado es sí también
+en los mensajes: van dentro de una conversación con una persona con nombre y
+teléfono, no hay nada anonimizado.
+
+No se pregunta por el cifrado de exportación: `ITSAppUsesNonExemptEncryption`
+ya va en `false` dentro de `app.json`.
 
 ## Capturas
 
