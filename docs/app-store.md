@@ -119,6 +119,46 @@ vacío parece una app a medio hacer, y eso es exactamente lo que le costó a la 
 de clientes un rechazo por 2.1.0 App Completeness. Grabar además un vídeo del
 recorrido completo en un iPhone real y adjuntarlo desde el primer envío.
 
+## Vídeo para la revisión
+
+`assets/store/trackaria-pro-demo.mp4` — 1:27, sin sonido, 660 × 1434, H.264.
+
+Se sube en *Información de revisión de la app* → **Archivos adjuntos**, en la
+misma pantalla que las credenciales. No es el *App Preview* de la ficha, que es
+otra cosa y es opcional.
+
+Se graba con la grabación de pantalla del propio iPhone y se pasa a H.264 antes
+de subirlo: el iPhone graba en HEVC a 120 fps y deja 50 MB que no hay por qué
+pedirle al revisor que descargue y que su reproductor puede no abrir.
+
+```
+ffmpeg -i <grabacion>.MP4 -vf "scale=660:-2" -r 30 -c:v libx264 -crf 23 \
+       -preset slow -pix_fmt yuv420p -an -movflags +faststart \
+       assets/store/trackaria-pro-demo.mp4
+```
+
+El recorrido es el de las notas de revisión y en el mismo orden: entrar,
+Pendiente, abrir un chat y quitárselo al bot, una cita, las clases del día, una
+clase con quién viene, la ficha de un alumno con su bono, y el aviso diciendo a
+cuánta gente le va a llegar. Si cambia el recorrido de las notas, se vuelve a
+grabar.
+
+## El centro de demostración
+
+Es el mismo que el de la app de clientes y el de Play. Se deja lleno con dos
+órdenes en el servidor, y hay que hacerlo **antes de grabar y antes de enviar a
+revisar**:
+
+```
+python manage.py rellenar_demo --clinica <correo del centro> --esperando 2 --si
+python manage.py seed_revisor
+```
+
+La primera llena la agenda, los pacientes, los bonos y la bandeja de WhatsApp.
+La segunda enciende las clases, las llena con gente apuntada y alguna lista de
+espera, y deja al paciente con el teléfono que figura en las notas. El correo
+está en `seed_revisor`, que es el único sitio donde vive.
+
 ## Privacidad de la app (App Privacy)
 
 - **¿Recopilas datos?** Sí.
