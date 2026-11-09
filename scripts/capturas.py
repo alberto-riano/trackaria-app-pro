@@ -139,9 +139,13 @@ def lienzo(ancho, alto, tienda='play'):
     return papel
 
 
+# Apple cambió los tamaños a finales de 2026: el juego de 6,9" (1320 × 2868) ya
+# no se admite y ahora pide un solo iPhone, «pantalla mediana con Dynamic
+# Island», que reescala al resto. De los cuatro tamaños que acepta se usa el
+# mayor en vertical, que es el que menos encoge una captura de 1320 de ancho.
 TIENDAS = {
     'play': (1080, 1920),
-    'apple': (1320, 2868),
+    'apple': (1206, 2622),
 }
 
 # El tamaño con el que están pensadas las letras y los márgenes. Lo demás se

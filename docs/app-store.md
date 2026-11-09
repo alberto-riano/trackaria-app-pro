@@ -211,8 +211,13 @@ ya va en `false` dentro de `app.json`.
 
 ## Capturas
 
-iPhone de 6,9" (1320 × 2868). Las monta `scripts/capturas.py` a partir de las
-mismas capturas en crudo que las de Play, que viven en `assets/store/capturas/`:
+iPhone «pantalla mediana con Dynamic Island» (**1206 × 2622**). A finales de
+2026 Apple se quedó con un solo tamaño de iPhone y lo reescala al resto: el
+juego de 6,9" (1320 × 2868) que había aquí dejó de admitirse de un día para
+otro, con un «las dimensiones del archivo no son válidas» por cada pieza. Los
+cuatro que acepta son 1179 × 2556, 1206 × 2622 y sus horizontales; se usa el
+mayor en vertical. Las monta `scripts/capturas.py` a partir de las mismas
+capturas en crudo que las de Play, que viven en `assets/store/capturas/`:
 
 ```
 python3 scripts/capturas.py
@@ -225,6 +230,9 @@ fichas cuenten lo mismo; está en la lista `TITULARES` del script y en
 [play-store.md](play-store.md).
 
 Las capturas en crudo tienen que venir del iPhone **sin pasar por nada que las
-comprima**. Las de Apple son casi un 50 % más grandes que las de Play, así que
-una captura que valía allí hay que agrandarla aquí y se nota en la ficha. El
-script avisa cuando le toca hacerlo.
+comprima**. Las de Apple son bastante más grandes que las de Play, así que una
+captura que valía allí hay que agrandarla aquí y se nota en la ficha. El script
+avisa cuando le toca hacerlo.
+
+Si Apple vuelve a cambiar los tamaños, se toca `TIENDAS` en el script y se
+vuelve a ejecutar: las piezas se rehacen solas desde las capturas en crudo.
